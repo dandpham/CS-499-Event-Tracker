@@ -44,8 +44,6 @@ public class MainActivity extends AppCompatActivity implements EventAdapter.OnEv
 
     // SharedPreferences
     private SharedPreferences sharedPreferences;
-    private static final String PREFS_NAME = "EventTrackerPrefs";
-    private static final String KEY_USER_ID = "user_id";
 
     // Request codes for activities
     private static final int REQUEST_ADD_EVENT = 1;
@@ -62,11 +60,11 @@ public class MainActivity extends AppCompatActivity implements EventAdapter.OnEv
         setContentView(R.layout.activity_main_dashboard);
 
         // Initialize SharedPreferences and get current user ID
-        sharedPreferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-        currentUserId = sharedPreferences.getInt(KEY_USER_ID, -1);
+        sharedPreferences = getSharedPreferences(AppConstants.PREFS_NAME, MODE_PRIVATE);
+        currentUserId = sharedPreferences.getInt(AppConstants.KEY_USER_ID, AppConstants.NO_ID);
 
         // Check if user is logged in
-        if (currentUserId == -1) {
+        if (currentUserId == AppConstants.NO_ID) {
             navigateToLogin();
             return;
         }
@@ -94,8 +92,8 @@ public class MainActivity extends AppCompatActivity implements EventAdapter.OnEv
      * Apply saved theme preference
      */
     private void applyTheme() {
-        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-        String theme = prefs.getString("theme_preference", "system");
+        SharedPreferences prefs = getSharedPreferences(AppConstants.PREFS_NAME, MODE_PRIVATE);
+        String theme = prefs.getString(AppConstants.KEY_THEME, "system");
 
         int nightMode;
         switch (theme) {
@@ -150,7 +148,7 @@ public class MainActivity extends AppCompatActivity implements EventAdapter.OnEv
             @Override
             public void onClick(View v) {
                 Intent intent = new Intent(MainActivity.this, AddEditEventActivity.class);
-                intent.putExtra("USER_ID", currentUserId);
+                intent.putExtra(AppConstants.EXTRA_USER_ID, currentUserId);
                 startActivityForResult(intent, REQUEST_ADD_EVENT);
             }
         });
@@ -188,7 +186,7 @@ public class MainActivity extends AppCompatActivity implements EventAdapter.OnEv
     @Override
     public void onEventClick(Event event) {
         Intent intent = new Intent(MainActivity.this, EventDetailActivity.class);
-        intent.putExtra("EVENT", event);
+        intent.putExtra(AppConstants.EXTRA_EVENT, event);
         startActivityForResult(intent, REQUEST_VIEW_EVENT);
     }
 
@@ -198,8 +196,8 @@ public class MainActivity extends AppCompatActivity implements EventAdapter.OnEv
     @Override
     public void onEditClick(Event event) {
         Intent intent = new Intent(MainActivity.this, AddEditEventActivity.class);
-        intent.putExtra("EVENT_ID", event.getEventId());
-        intent.putExtra("USER_ID", currentUserId);
+        intent.putExtra(AppConstants.EXTRA_EVENT_ID, event.getEventId());
+        intent.putExtra(AppConstants.EXTRA_USER_ID, currentUserId);
         startActivityForResult(intent, REQUEST_EDIT_EVENT);
     }
 
