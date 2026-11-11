@@ -40,7 +40,7 @@ public class EventDetailActivity extends AppCompatActivity {
         databaseHelper = new DatabaseHelper(this);
 
         // Get event from intent
-        event = getIntent().getParcelableExtra("EVENT");
+        event = getIntent().getParcelableExtra(AppConstants.EXTRA_EVENT);
 
         if (event == null) {
             Toast.makeText(this, "Error loading event", Toast.LENGTH_SHORT).show();
@@ -104,8 +104,8 @@ public class EventDetailActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 Intent intent = new Intent(EventDetailActivity.this, AddEditEventActivity.class);
-                intent.putExtra("EVENT_ID", event.getEventId());
-                intent.putExtra("USER_ID", event.getUserId());
+                intent.putExtra(AppConstants.EXTRA_EVENT_ID, event.getEventId());
+                intent.putExtra(AppConstants.EXTRA_USER_ID, event.getUserId());
                 startActivityForResult(intent, REQUEST_EDIT_EVENT);
             }
         });

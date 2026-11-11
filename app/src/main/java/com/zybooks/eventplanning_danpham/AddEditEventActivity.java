@@ -48,7 +48,7 @@ public class AddEditEventActivity extends AppCompatActivity {
     // Data components
     private DatabaseHelper databaseHelper;
     private int userId;
-    private int eventId = -1; // -1 indicates new event, otherwise editing existing
+    private int eventId = AppConstants.NO_ID; // NO_ID means a new event; otherwise editing an existing one
 
     // Selected date and time
     private String selectedDate = "";
@@ -63,16 +63,16 @@ public class AddEditEventActivity extends AppCompatActivity {
         databaseHelper = new DatabaseHelper(this);
 
         // Get user ID from intent
-        userId = getIntent().getIntExtra("USER_ID", -1);
+        userId = getIntent().getIntExtra(AppConstants.EXTRA_USER_ID, AppConstants.NO_ID);
 
         // Get event ID from intent (if editing)
-        eventId = getIntent().getIntExtra("EVENT_ID", -1);
+        eventId = getIntent().getIntExtra(AppConstants.EXTRA_EVENT_ID, AppConstants.NO_ID);
 
         // Initialize UI components
         initializeViews();
 
         // Check if we're editing an existing event
-        if (eventId != -1) {
+        if (eventId != AppConstants.NO_ID) {
             loadEventData();
         } else {
             textViewScreenTitle.setText("Add Event");
@@ -251,12 +251,12 @@ public class AddEditEventActivity extends AppCompatActivity {
         checkExactAlarmPermission();
 
         // Create or update event
-        if (eventId == -1) {
+        if (eventId == AppConstants.NO_ID) {
             // Create new event
             Event newEvent = new Event(userId, eventName, selectedDate, selectedTime, location, description);
             long result = databaseHelper.addEvent(newEvent);
 
-            if (result != -1) {
+            if (result != AppConstants.NO_ID) {
                 // Schedule SMS notification for this event
                 scheduleEventNotification((int) result, eventName, selectedDate, selectedTime);
 
@@ -358,9 +358,9 @@ public class AddEditEventActivity extends AppCompatActivity {
 
                 // Create intent for notification
                 Intent intent = new Intent(this, EventNotificationReceiver.class);
-                intent.putExtra("EVENT_NAME", eventName);
-                intent.putExtra("EVENT_DATE", eventDate);
-                intent.putExtra("EVENT_TIME", eventTime);
+                intent.putExtra(AppConstants.EXTRA_EVENT_NAME, eventName);
+                intent.putExtra(AppConstants.EXTRA_EVENT_DATE, eventDate);
+                intent.putExtra(AppConstants.EXTRA_EVENT_TIME, eventTime);
 
                 PendingIntent pendingIntent = PendingIntent.getBroadcast(
                         this,
