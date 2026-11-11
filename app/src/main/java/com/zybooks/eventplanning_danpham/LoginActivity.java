@@ -30,9 +30,6 @@ public class LoginActivity extends AppCompatActivity {
 
     // SharedPreferences for storing user session
     private SharedPreferences sharedPreferences;
-    private static final String PREFS_NAME = "EventTrackerPrefs";
-    private static final String KEY_USER_ID = "user_id";
-    private static final String KEY_USERNAME = "username";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -43,7 +40,7 @@ public class LoginActivity extends AppCompatActivity {
         databaseHelper = new DatabaseHelper(this);
 
         // Initialize SharedPreferences
-        sharedPreferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        sharedPreferences = getSharedPreferences(AppConstants.PREFS_NAME, MODE_PRIVATE);
 
         // Check if user is already logged in
         if (isUserLoggedIn()) {
@@ -150,7 +147,7 @@ public class LoginActivity extends AppCompatActivity {
         User newUser = new User(username, password);
         long userId = databaseHelper.addUser(newUser);
 
-        if (userId != -1) {
+        if (userId != AppConstants.NO_ID) {
             // Registration successful
             saveUserSession((int) userId, username);
             showProgress(false);
@@ -227,8 +224,8 @@ public class LoginActivity extends AppCompatActivity {
      */
     private void saveUserSession(int userId, String username) {
         SharedPreferences.Editor editor = sharedPreferences.edit();
-        editor.putInt(KEY_USER_ID, userId);
-        editor.putString(KEY_USERNAME, username);
+        editor.putInt(AppConstants.KEY_USER_ID, userId);
+        editor.putString(AppConstants.KEY_USERNAME, username);
         editor.apply();
     }
 
@@ -237,7 +234,7 @@ public class LoginActivity extends AppCompatActivity {
      * @return true if user session exists, false otherwise
      */
     private boolean isUserLoggedIn() {
-        return sharedPreferences.contains(KEY_USER_ID);
+        return sharedPreferences.contains(AppConstants.KEY_USER_ID);
     }
 
     /**
