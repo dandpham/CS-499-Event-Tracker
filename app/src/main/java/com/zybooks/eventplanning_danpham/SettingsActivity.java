@@ -43,11 +43,6 @@ public class SettingsActivity extends AppCompatActivity {
 
     // SharedPreferences
     private SharedPreferences sharedPreferences;
-    private static final String PREFS_NAME = "EventTrackerPrefs";
-    private static final String KEY_USER_ID = "user_id";
-    private static final String KEY_USERNAME = "username";
-    private static final String KEY_NOTIFICATIONS_ENABLED = "notifications_enabled";
-    private static final String KEY_THEME = "theme_preference";
 
     // SMS permission request code
     private static final int SMS_PERMISSION_REQUEST_CODE = 100;
@@ -63,7 +58,7 @@ public class SettingsActivity extends AppCompatActivity {
         Log.i(TAG, "onCreate - SettingsActivity started");
 
         // Initialize SharedPreferences
-        sharedPreferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        sharedPreferences = getSharedPreferences(AppConstants.PREFS_NAME, MODE_PRIVATE);
 
         // Initialize database helper
         databaseHelper = new DatabaseHelper(this);
@@ -96,18 +91,18 @@ public class SettingsActivity extends AppCompatActivity {
      */
     private void loadSettings() {
         // Load username
-        String username = sharedPreferences.getString(KEY_USERNAME, "User");
+        String username = sharedPreferences.getString(AppConstants.KEY_USERNAME, "User");
         textViewAccountName.setText(username);
 
         // Load notification preference
-        boolean notificationsEnabled = sharedPreferences.getBoolean(KEY_NOTIFICATIONS_ENABLED, true);
+        boolean notificationsEnabled = sharedPreferences.getBoolean(AppConstants.KEY_NOTIFICATIONS_ENABLED, true);
         switchNotifications.setChecked(notificationsEnabled);
 
         // Check SMS permission status
         updateSmsPermissionStatus();
 
         // Load theme preference
-        String theme = sharedPreferences.getString(KEY_THEME, "system");
+        String theme = sharedPreferences.getString(AppConstants.KEY_THEME, "system");
         loadThemeSelection(theme);
     }
 
@@ -159,7 +154,7 @@ public class SettingsActivity extends AppCompatActivity {
             Log.i(TAG, "Notifications switch toggled to: " + isChecked);
 
             SharedPreferences.Editor editor = sharedPreferences.edit();
-            editor.putBoolean(KEY_NOTIFICATIONS_ENABLED, isChecked);
+            editor.putBoolean(AppConstants.KEY_NOTIFICATIONS_ENABLED, isChecked);
             editor.apply();
 
             String message = isChecked ? "Notifications enabled" : "Notifications disabled";
@@ -212,7 +207,7 @@ public class SettingsActivity extends AppCompatActivity {
 
             // Save theme preference
             SharedPreferences.Editor editor = sharedPreferences.edit();
-            editor.putString(KEY_THEME, theme);
+            editor.putString(AppConstants.KEY_THEME, theme);
             editor.apply();
 
             // Apply theme immediately
@@ -307,8 +302,8 @@ public class SettingsActivity extends AppCompatActivity {
                 .setPositiveButton("Logout", (dialog, which) -> {
                     // Clear SharedPreferences
                     SharedPreferences.Editor editor = sharedPreferences.edit();
-                    editor.remove(KEY_USER_ID);
-                    editor.remove(KEY_USERNAME);
+                    editor.remove(AppConstants.KEY_USER_ID);
+                    editor.remove(AppConstants.KEY_USERNAME);
                     editor.apply();
 
                     // Navigate to login
