@@ -13,22 +13,21 @@ import android.widget.Toast;
 public class EventNotificationReceiver extends BroadcastReceiver {
 
     private static final String TAG = "EventNotificationReceiver";
-    private static final String PREFS_NAME = "EventTrackerPrefs";
 
     @Override
     public void onReceive(Context context, Intent intent) {
         Log.i(TAG, "Event notification triggered");
 
         // Get event details from intent
-        String eventName = intent.getStringExtra("EVENT_NAME");
-        String eventDate = intent.getStringExtra("EVENT_DATE");
-        String eventTime = intent.getStringExtra("EVENT_TIME");
+        String eventName = intent.getStringExtra(AppConstants.EXTRA_EVENT_NAME);
+        String eventDate = intent.getStringExtra(AppConstants.EXTRA_EVENT_DATE);
+        String eventTime = intent.getStringExtra(AppConstants.EXTRA_EVENT_TIME);
 
         Log.i(TAG, "Event: " + eventName + " on " + eventDate + " at " + eventTime);
 
         // Check if notifications are enabled
-        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-        boolean notificationsEnabled = prefs.getBoolean("notifications_enabled", true);
+        SharedPreferences prefs = context.getSharedPreferences(AppConstants.PREFS_NAME, Context.MODE_PRIVATE);
+        boolean notificationsEnabled = prefs.getBoolean(AppConstants.KEY_NOTIFICATIONS_ENABLED, true);
 
         if (!notificationsEnabled) {
             Log.i(TAG, "Notifications disabled in settings");
