@@ -160,40 +160,17 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     /**
-     * Validate username and password input
+     * Validate username and password input using the shared Validator rules
      * @param username Username input
      * @param password Password input
      * @return true if input is valid, false otherwise
      */
     private boolean validateInput(String username, String password) {
-        // Check for empty username
-        if (username.isEmpty()) {
-            showError("Please enter a username");
-            editTextUsername.requestFocus();
+        String error = Validator.checkLogin(username, password);
+        if (error != null) {
+            showError(error);
             return false;
         }
-
-        // Check username length (minimum 3 characters)
-        if (username.length() < 3) {
-            showError("Username must be at least 3 characters");
-            editTextUsername.requestFocus();
-            return false;
-        }
-
-        // Check for empty password
-        if (password.isEmpty()) {
-            showError("Please enter a password");
-            editTextPassword.requestFocus();
-            return false;
-        }
-
-        // Check password length (minimum 6 characters)
-        if (password.length() < 6) {
-            showError("Password must be at least 6 characters");
-            editTextPassword.requestFocus();
-            return false;
-        }
-
         return true;
     }
 

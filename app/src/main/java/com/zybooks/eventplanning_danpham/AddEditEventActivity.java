@@ -24,6 +24,7 @@ import android.content.Context;
 import android.util.Log;
 import android.content.Intent;
 import java.util.Calendar;
+import java.time.LocalDateTime;
 
 /**
  * AddEditEventActivity handles creating new events and editing existing events.
@@ -230,20 +231,15 @@ public class AddEditEventActivity extends AppCompatActivity {
         String location = editTextLocation.getText().toString().trim();
         String description = editTextDescription.getText().toString().trim();
 
-        // Validate required fields
-        if (eventName.isEmpty()) {
-            editTextEventName.setError("Event name is required");
-            editTextEventName.requestFocus();
-            return;
-        }
+        // Validate input using the shared Validator rules.
+        // New events can't be in the past. Existing events can be,
+        // since an overdue task still needs to be edited.
+        boolean isNewEvent = (eventId == AppConstants.NO_ID);
+        LocalDateTime earliestAllowed = isNewEvent ? LocalDateTime.now() : LocalDateTime.MIN;
 
-        if (selectedDate.isEmpty()) {
-            Toast.makeText(this, "Please select a date", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        if (selectedTime.isEmpty()) {
-            Toast.makeText(this, "Please select a time", Toast.LENGTH_SHORT).show();
+        String error = Validator.checkEvent(eventName, selectedDate, selectedTime, earliestAllowed);
+        if (error != null) {
+            Toast.makeText(this, error, Toast.LENGTH_SHORT).show();
             return;
         }
 
