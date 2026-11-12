@@ -42,8 +42,8 @@ public class MainActivity extends AppCompatActivity implements EventAdapter.OnEv
     private List<Event> eventList;
     private int currentUserId;
 
-    // SharedPreferences
-    private SharedPreferences sharedPreferences;
+    // Tracks the logged-in user
+    private SessionManager sessionManager;
 
     // Request codes for activities
     private static final int REQUEST_ADD_EVENT = 1;
@@ -59,15 +59,15 @@ public class MainActivity extends AppCompatActivity implements EventAdapter.OnEv
 
         setContentView(R.layout.activity_main_dashboard);
 
-        // Initialize SharedPreferences and get current user ID
-        sharedPreferences = getSharedPreferences(AppConstants.PREFS_NAME, MODE_PRIVATE);
-        currentUserId = sharedPreferences.getInt(AppConstants.KEY_USER_ID, AppConstants.NO_ID);
-
         // Check if user is logged in
-        if (currentUserId == AppConstants.NO_ID) {
+        sessionManager = new SessionManager(this);
+        if (!sessionManager.isLoggedIn()) {
             navigateToLogin();
             return;
         }
+
+        // Get the logged-in user's ID
+        currentUserId = sessionManager.getUserId();
 
         // Initialize database helper
         databaseHelper = new DatabaseHelper(this);
@@ -148,7 +148,6 @@ public class MainActivity extends AppCompatActivity implements EventAdapter.OnEv
             @Override
             public void onClick(View v) {
                 Intent intent = new Intent(MainActivity.this, AddEditEventActivity.class);
-                intent.putExtra(AppConstants.EXTRA_USER_ID, currentUserId);
                 startActivityForResult(intent, REQUEST_ADD_EVENT);
             }
         });
@@ -197,7 +196,6 @@ public class MainActivity extends AppCompatActivity implements EventAdapter.OnEv
     public void onEditClick(Event event) {
         Intent intent = new Intent(MainActivity.this, AddEditEventActivity.class);
         intent.putExtra(AppConstants.EXTRA_EVENT_ID, event.getEventId());
-        intent.putExtra(AppConstants.EXTRA_USER_ID, currentUserId);
         startActivityForResult(intent, REQUEST_EDIT_EVENT);
     }
 

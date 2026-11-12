@@ -62,8 +62,8 @@ public class AddEditEventActivity extends AppCompatActivity {
         // Initialize database helper
         databaseHelper = new DatabaseHelper(this);
 
-        // Get user ID from intent
-        userId = getIntent().getIntExtra(AppConstants.EXTRA_USER_ID, AppConstants.NO_ID);
+        // Get the logged-in user's ID
+        userId = new SessionManager(this).getUserId();
 
         // Get event ID from intent (if editing)
         eventId = getIntent().getIntExtra(AppConstants.EXTRA_EVENT_ID, AppConstants.NO_ID);
