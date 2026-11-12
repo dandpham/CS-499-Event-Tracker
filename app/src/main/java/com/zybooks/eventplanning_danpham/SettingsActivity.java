@@ -44,6 +44,9 @@ public class SettingsActivity extends AppCompatActivity {
     // SharedPreferences
     private SharedPreferences sharedPreferences;
 
+    // Tracks the logged-in user
+    private SessionManager sessionManager;
+
     // SMS permission request code
     private static final int SMS_PERMISSION_REQUEST_CODE = 100;
 
@@ -59,6 +62,9 @@ public class SettingsActivity extends AppCompatActivity {
 
         // Initialize SharedPreferences
         sharedPreferences = getSharedPreferences(AppConstants.PREFS_NAME, MODE_PRIVATE);
+
+        // Initialize session manager
+        sessionManager = new SessionManager(this);
 
         // Initialize database helper
         databaseHelper = new DatabaseHelper(this);
@@ -91,7 +97,7 @@ public class SettingsActivity extends AppCompatActivity {
      */
     private void loadSettings() {
         // Load username
-        String username = sharedPreferences.getString(AppConstants.KEY_USERNAME, "User");
+        String username = sessionManager.getUsername();
         textViewAccountName.setText(username);
 
         // Load notification preference
@@ -300,11 +306,8 @@ public class SettingsActivity extends AppCompatActivity {
                 .setTitle("Logout")
                 .setMessage("Are you sure you want to logout?")
                 .setPositiveButton("Logout", (dialog, which) -> {
-                    // Clear SharedPreferences
-                    SharedPreferences.Editor editor = sharedPreferences.edit();
-                    editor.remove(AppConstants.KEY_USER_ID);
-                    editor.remove(AppConstants.KEY_USERNAME);
-                    editor.apply();
+                    // Clear the logged-in user's session
+                    sessionManager.clearSession();
 
                     // Navigate to login
                     Intent intent = new Intent(SettingsActivity.this, LoginActivity.class);

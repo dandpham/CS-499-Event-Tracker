@@ -18,7 +18,6 @@ public final class AppConstants {
     public static final String KEY_THEME = "theme_preference";
 
     // Intent extras
-    public static final String EXTRA_USER_ID = "USER_ID";
     public static final String EXTRA_EVENT_ID = "EVENT_ID";
     public static final String EXTRA_EVENT = "EVENT";
     public static final String EXTRA_EVENT_NAME = "EVENT_NAME";

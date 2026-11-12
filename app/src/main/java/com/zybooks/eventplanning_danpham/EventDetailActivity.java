@@ -105,7 +105,6 @@ public class EventDetailActivity extends AppCompatActivity {
             public void onClick(View v) {
                 Intent intent = new Intent(EventDetailActivity.this, AddEditEventActivity.class);
                 intent.putExtra(AppConstants.EXTRA_EVENT_ID, event.getEventId());
-                intent.putExtra(AppConstants.EXTRA_USER_ID, event.getUserId());
                 startActivityForResult(intent, REQUEST_EDIT_EVENT);
             }
         });
