@@ -18,3 +18,7 @@ Enhanced from my CS 360 Event Tracking app for ePortfolio Category 1: Software D
 - ViewModels will depend on the TaskRepository interface rather than the SQLite class, so tests can use a fake repository without a database.
 - Moved all reminder code into one ReminderScheduler class. Reminders now fire 60 minutes before the due time instead of at a hard-coded 9:00 AM, and the repository always cancels a task's reminder when it deletes the task, which fixes the bug where deleting from the detail screen left the reminder active.
 - Replaced the Calendar date parsing with java.time and one shared date format in AppConstants.
+- Added ViewModels with LiveData. TaskListViewModel handles the dashboard (loading, sorting by real due date, flagging overdue tasks, deleting). TaskViewModel handles a single task and is shared by the add/edit and detail screens, so that logic isn't duplicated.
+- The dashboard now sorts by real dates in the ViewModel, which fixes tasks appearing out of order across years, even though the database still stores dates as text (to be fixed in the Databases enhancement).
+- ViewModels receive the current time through a Supplier, so overdue checks can be tested with a fixed time.
+- Login and registration still query the database on the main thread. Moving them to a UserRepository is planned for the Databases enhancement.

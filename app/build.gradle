@@ -48,4 +48,7 @@ dependencies {
     implementation libs.recyclerview
     implementation libs.swiperefreshlayout.v110
     implementation libs.constraintlayout.v214
+    implementation libs.lifecycle.viewmodel
+    implementation libs.lifecycle.livedata
+    testImplementation libs.arch.core.testing
 }
