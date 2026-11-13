@@ -15,6 +15,9 @@ public final class Validator {
     public static final int MIN_USERNAME_LENGTH = 3;
     public static final int MIN_PASSWORD_LENGTH = 6;
 
+    // 2 to 10 letters, numbers, or dashes, such as N12345 or 165432
+    private static final String TAIL_NUMBER_PATTERN = "[A-Za-z0-9-]{2,10}";
+
     // Matches how the date and time pickers format their values,
     // such as "12/15/2026" and "01:30 PM"
     private static final DateTimeFormatter DATE_TIME_FORMAT =
@@ -45,34 +48,41 @@ public final class Validator {
     }
 
     /**
-     * Check event input
-     * @param now the current date and time, passed in so tests can control it
+     * Check maintenance task input
+     * @param earliestAllowed the earliest allowed due date and time, passed in
+     *                        so tests can control it. Use LocalDateTime.MIN to
+     *                        allow past dates when editing an existing task.
      * @return an error message, or null if valid
      */
-    public static String checkEvent(String name, String date, String time, LocalDateTime now) {
+    public static String checkTask(String taskName, String tailNumber, String date,
+                                   String time, LocalDateTime earliestAllowed) {
         // Required fields
-        if (name == null || name.trim().isEmpty()) {
-            return "Event name is required";
+        if (taskName == null || taskName.trim().isEmpty()) {
+            return "Task name is required";
         }
-
+        if (tailNumber == null || tailNumber.trim().isEmpty()) {
+            return "Tail number is required";
+        }
+        if (!tailNumber.trim().matches(TAIL_NUMBER_PATTERN)) {
+            return "Tail number must be 2 to 10 letters, numbers, or dashes";
+        }
         if (date == null || date.isEmpty()) {
             return "Please select a date";
         }
-
         if (time == null || time.isEmpty()) {
             return "Please select a time";
         }
 
         // Make sure the date and time can be read
-        LocalDateTime eventDateTime;
+        LocalDateTime dueDateTime;
         try {
-            eventDateTime = LocalDateTime.parse(date + " " + time, DATE_TIME_FORMAT);
+            dueDateTime = LocalDateTime.parse(date + " " + time, DATE_TIME_FORMAT);
         } catch (DateTimeParseException e) {
             return "Invalid date or time";
         }
 
-        // Events can't be scheduled in the past
-        if (eventDateTime.isBefore(now)) {
+        // New tasks can't be due in the past
+        if (dueDateTime.isBefore(earliestAllowed)) {
             return "Date and time can't be in the past";
         }
 

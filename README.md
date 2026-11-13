@@ -12,3 +12,4 @@ Enhanced from my CS 360 Event Tracking app for ePortfolio Category 1: Software D
 - Renamed Event to MaintenanceTask and added task type and status fields. Used Android Studio's Refactor > Rename so every reference updated safely.
 - Rewrote onUpgrade() to add new columns with ALTER TABLE instead of dropping all tables, so existing data survives the upgrade. Old events with no location are marked UNASSIGNED for review instead of being deleted.
 - Combined the repeated row-reading code in DatabaseHelper into one cursorToTask() method.
+- Found that every DatabaseHelper method closes the database after each query, which is inefficient. Planned for the Databases enhancement.
