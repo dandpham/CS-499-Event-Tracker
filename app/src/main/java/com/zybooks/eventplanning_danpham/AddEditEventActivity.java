@@ -2,45 +2,51 @@ package com.zybooks.eventplanning_danpham;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.app.AlarmManager;
 import android.app.DatePickerDialog;
+import android.app.PendingIntent;
 import android.app.TimePickerDialog;
+import android.content.Context;
+import android.content.Intent;
 import android.os.Bundle;
-import android.os.Build;
+import android.util.Log;
 import android.view.View;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.DatePicker;
 import android.widget.EditText;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.TimePicker;
 import android.widget.Toast;
-import android.provider.Settings;
 
 import androidx.annotation.RequiresPermission;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
-import android.app.AlarmManager;
-import android.app.PendingIntent;
-import android.content.Context;
-import android.util.Log;
-import android.content.Intent;
+
+import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Locale;
 
 /**
- * AddEditEventActivity handles creating new events and editing existing events.
- * Provides form input for all event details.
+ * AddEditEventActivity handles creating new maintenance tasks and editing existing ones.
+ * Provides form input for all task details.
  */
-
 public class AddEditEventActivity extends AppCompatActivity {
 
     // UI components
     private TextView textViewScreenTitle;
-    private EditText editTextEventName;
+    private EditText editTextTaskName;
+    private EditText editTextTailNumber;
+    private Spinner spinnerTaskType;
     private Button buttonSelectDate;
     private TextView textViewSelectedDate;
     private Button buttonSelectTime;
     private TextView textViewSelectedTime;
-    private EditText editTextLocation;
-    private EditText editTextDescription;
+    private EditText editTextNotes;
+    private CheckBox checkBoxComplete;
     private Button buttonSave;
     private Button buttonCancel;
     private Button buttonDelete;
@@ -48,7 +54,7 @@ public class AddEditEventActivity extends AppCompatActivity {
     // Data components
     private DatabaseHelper databaseHelper;
     private int userId;
-    private int eventId = -1; // -1 indicates new event, otherwise editing existing
+    private int taskId = AppConstants.NO_ID; // NO_ID means a new task; otherwise editing an existing one
 
     // Selected date and time
     private String selectedDate = "";
@@ -62,21 +68,23 @@ public class AddEditEventActivity extends AppCompatActivity {
         // Initialize database helper
         databaseHelper = new DatabaseHelper(this);
 
-        // Get user ID from intent
-        userId = getIntent().getIntExtra("USER_ID", -1);
+        // Get the logged-in user's ID
+        userId = new SessionManager(this).getUserId();
 
-        // Get event ID from intent (if editing)
-        eventId = getIntent().getIntExtra("EVENT_ID", -1);
+        // Get task ID from intent (if editing)
+        taskId = getIntent().getIntExtra(AppConstants.EXTRA_EVENT_ID, AppConstants.NO_ID);
 
         // Initialize UI components
         initializeViews();
+        setupTaskTypeSpinner();
 
-        // Check if we're editing an existing event
-        if (eventId != -1) {
-            loadEventData();
+        // Check if we're editing an existing task
+        if (taskId != AppConstants.NO_ID) {
+            loadTaskData();
         } else {
-            textViewScreenTitle.setText("Add Event");
+            textViewScreenTitle.setText("Add Task");
             buttonDelete.setVisibility(View.GONE);
+            checkBoxComplete.setVisibility(View.GONE); // New tasks always start as Open
         }
 
         // Set up listeners
@@ -88,33 +96,52 @@ public class AddEditEventActivity extends AppCompatActivity {
      */
     private void initializeViews() {
         textViewScreenTitle = findViewById(R.id.textViewScreenTitle);
-        editTextEventName = findViewById(R.id.editTextEventName);
+        editTextTaskName = findViewById(R.id.editTextTaskName);
+        editTextTailNumber = findViewById(R.id.editTextTailNumber);
+        spinnerTaskType = findViewById(R.id.spinnerTaskType);
         buttonSelectDate = findViewById(R.id.buttonSelectDate);
         textViewSelectedDate = findViewById(R.id.textViewSelectedDate);
         buttonSelectTime = findViewById(R.id.buttonSelectTime);
         textViewSelectedTime = findViewById(R.id.textViewSelectedTime);
-        editTextLocation = findViewById(R.id.editTextLocation);
-        editTextDescription = findViewById(R.id.editTextDescription);
+        editTextNotes = findViewById(R.id.editTextNotes);
+        checkBoxComplete = findViewById(R.id.checkBoxComplete);
         buttonSave = findViewById(R.id.buttonSave);
         buttonCancel = findViewById(R.id.buttonCancel);
         buttonDelete = findViewById(R.id.buttonDelete);
     }
 
     /**
-     * Load existing event data for editing
+     * Fill the task type dropdown from the list in MaintenanceTask
      */
-    private void loadEventData() {
-        Event existingEvent = databaseHelper.getEvent(eventId);
+    private void setupTaskTypeSpinner() {
+        ArrayAdapter<String> typeAdapter = new ArrayAdapter<>(
+                this, android.R.layout.simple_spinner_item, MaintenanceTask.TASK_TYPES);
+        typeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinnerTaskType.setAdapter(typeAdapter);
+    }
 
-        if (existingEvent != null) {
-            textViewScreenTitle.setText("Edit Event");
-            editTextEventName.setText(existingEvent.getEventName());
-            selectedDate = existingEvent.getEventDate();
+    /**
+     * Load existing task data for editing
+     */
+    private void loadTaskData() {
+        MaintenanceTask existingTask = databaseHelper.getEvent(taskId);
+
+        if (existingTask != null) {
+            textViewScreenTitle.setText("Edit Task");
+            editTextTaskName.setText(existingTask.getTaskName());
+            editTextTailNumber.setText(existingTask.getTailNumber());
+            selectedDate = existingTask.getDueDate();
             textViewSelectedDate.setText(selectedDate);
-            selectedTime = existingEvent.getEventTime();
+            selectedTime = existingTask.getDueTime();
             textViewSelectedTime.setText(selectedTime);
-            editTextLocation.setText(existingEvent.getLocation());
-            editTextDescription.setText(existingEvent.getDescription());
+            editTextNotes.setText(existingTask.getNotes());
+
+            // Select the saved task type, or the first type if it isn't found
+            int typeIndex = Arrays.asList(MaintenanceTask.TASK_TYPES).indexOf(existingTask.getTaskType());
+            spinnerTaskType.setSelection(Math.max(typeIndex, 0));
+
+            checkBoxComplete.setChecked(existingTask.isComplete());
+            checkBoxComplete.setVisibility(View.VISIBLE);
             buttonDelete.setVisibility(View.VISIBLE);
         }
     }
@@ -123,45 +150,11 @@ public class AddEditEventActivity extends AppCompatActivity {
      * Set up all button click listeners
      */
     private void setupListeners() {
-        // Date picker button
-        buttonSelectDate.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                showDatePicker();
-            }
-        });
-
-        // Time picker button
-        buttonSelectTime.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                showTimePicker();
-            }
-        });
-
-        // Save button
-        buttonSave.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                saveEvent();
-            }
-        });
-
-        // Cancel button
-        buttonCancel.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                finish();
-            }
-        });
-
-        // Delete button
-        buttonDelete.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                showDeleteConfirmation();
-            }
-        });
+        buttonSelectDate.setOnClickListener(v -> showDatePicker());
+        buttonSelectTime.setOnClickListener(v -> showTimePicker());
+        buttonSave.setOnClickListener(v -> saveTask());
+        buttonCancel.setOnClickListener(v -> finish());
+        buttonDelete.setOnClickListener(v -> showDeleteConfirmation());
     }
 
     /**
@@ -181,7 +174,8 @@ public class AddEditEventActivity extends AppCompatActivity {
                     @Override
                     public void onDateSet(DatePicker view, int selectedYear, int selectedMonth, int selectedDay) {
                         // Format date as MM/DD/YYYY
-                        selectedDate = String.format("%02d/%02d/%04d", selectedMonth + 1, selectedDay, selectedYear);
+                        selectedDate = String.format(Locale.US, "%02d/%02d/%04d",
+                                selectedMonth + 1, selectedDay, selectedYear);
                         textViewSelectedDate.setText(selectedDate);
                     }
                 },
@@ -210,7 +204,8 @@ public class AddEditEventActivity extends AppCompatActivity {
                         String amPm = selectedHour >= 12 ? "PM" : "AM";
                         int displayHour = selectedHour % 12;
                         if (displayHour == 0) displayHour = 12;
-                        selectedTime = String.format("%02d:%02d %s", displayHour, selectedMinute, amPm);
+                        selectedTime = String.format(Locale.US, "%02d:%02d %s",
+                                displayHour, selectedMinute, amPm);
                         textViewSelectedTime.setText(selectedTime);
                     }
                 },
@@ -221,70 +216,74 @@ public class AddEditEventActivity extends AppCompatActivity {
     }
 
     /**
-     * Validate and save event to database
+     * Validate and save the task to the database
      */
     @SuppressLint("ScheduleExactAlarm")
-    private void saveEvent() {
+    private void saveTask() {
         // Get input values
-        String eventName = editTextEventName.getText().toString().trim();
-        String location = editTextLocation.getText().toString().trim();
-        String description = editTextDescription.getText().toString().trim();
+        String taskName = editTextTaskName.getText().toString().trim();
+        String tailNumber = editTextTailNumber.getText().toString().trim().toUpperCase(Locale.US);
+        String notes = editTextNotes.getText().toString().trim();
+        String taskType = (String) spinnerTaskType.getSelectedItem();
+        String status = checkBoxComplete.isChecked()
+                ? MaintenanceTask.STATUS_COMPLETE
+                : MaintenanceTask.STATUS_OPEN;
 
-        // Validate required fields
-        if (eventName.isEmpty()) {
-            editTextEventName.setError("Event name is required");
-            editTextEventName.requestFocus();
-            return;
-        }
+        // Validate input using the shared Validator rules.
+        // New tasks can't be due in the past. Existing tasks can be,
+        // since an overdue task still needs to be edited.
+        boolean isNewTask = (taskId == AppConstants.NO_ID);
+        LocalDateTime earliestAllowed = isNewTask ? LocalDateTime.now() : LocalDateTime.MIN;
 
-        if (selectedDate.isEmpty()) {
-            Toast.makeText(this, "Please select a date", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        if (selectedTime.isEmpty()) {
-            Toast.makeText(this, "Please select a time", Toast.LENGTH_SHORT).show();
+        String error = Validator.checkTask(taskName, tailNumber, selectedDate, selectedTime, earliestAllowed);
+        if (error != null) {
+            Toast.makeText(this, error, Toast.LENGTH_SHORT).show();
             return;
         }
 
         // Check exact alarm permission before saving
         checkExactAlarmPermission();
 
-        // Create or update event
-        if (eventId == -1) {
-            // Create new event
-            Event newEvent = new Event(userId, eventName, selectedDate, selectedTime, location, description);
-            long result = databaseHelper.addEvent(newEvent);
+        if (isNewTask) {
+            // Create new task
+            MaintenanceTask newTask = new MaintenanceTask(userId, taskName, selectedDate,
+                    selectedTime, tailNumber, notes);
+            newTask.setTaskType(taskType);
+            newTask.setStatus(status);
+            long result = databaseHelper.addEvent(newTask);
 
-            if (result != -1) {
-                // Schedule SMS notification for this event
-                scheduleEventNotification((int) result, eventName, selectedDate, selectedTime);
+            if (result != AppConstants.NO_ID) {
+                scheduleEventNotification((int) result, taskName, selectedDate, selectedTime);
 
-                Toast.makeText(this, "Event added successfully", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "Task added successfully", Toast.LENGTH_SHORT).show();
                 setResult(RESULT_OK);
                 finish();
             } else {
-                Toast.makeText(this, "Failed to add event", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "Failed to add task", Toast.LENGTH_SHORT).show();
             }
         } else {
-            // Update existing event
-            Event updatedEvent = new Event(eventId, userId, eventName, selectedDate, selectedTime, location, description);
-            int result = databaseHelper.updateEvent(updatedEvent);
+            // Update existing task
+            MaintenanceTask updatedTask = new MaintenanceTask(taskId, userId, taskName,
+                    selectedDate, selectedTime, tailNumber, notes);
+            updatedTask.setTaskType(taskType);
+            updatedTask.setStatus(status);
+            int result = databaseHelper.updateEvent(updatedTask);
 
             if (result > 0) {
-                // Reschedule notification with updated details
-                cancelEventNotification(eventId);
-                scheduleEventNotification(eventId, eventName, selectedDate, selectedTime);
+                // Replace the old reminder. Completed tasks don't get a reminder.
+                cancelEventNotification(taskId);
+                if (!updatedTask.isComplete()) {
+                    scheduleEventNotification(taskId, taskName, selectedDate, selectedTime);
+                }
 
-                Toast.makeText(this, "Event updated successfully", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "Task updated successfully", Toast.LENGTH_SHORT).show();
                 setResult(RESULT_OK);
                 finish();
             } else {
-                Toast.makeText(this, "Failed to update event", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "Failed to update task", Toast.LENGTH_SHORT).show();
             }
         }
     }
-
 
     /**
      * Check if exact alarm permission is granted (Android 12+)
@@ -296,7 +295,7 @@ public class AddEditEventActivity extends AppCompatActivity {
                 // Show dialog explaining why we need this permission
                 new AlertDialog.Builder(this)
                         .setTitle("Alarm Permission Required")
-                        .setMessage("This app needs permission to schedule exact alarms for event notifications. " +
+                        .setMessage("This app needs permission to schedule exact alarms for task reminders. " +
                                 "Please grant this permission in the next screen.")
                         .setPositiveButton("Grant Permission", (dialog, which) -> {
                             // Open settings to grant permission
@@ -312,7 +311,7 @@ public class AddEditEventActivity extends AppCompatActivity {
     }
 
     /**
-     * Schedule SMS notification for an event
+     * Schedule a reminder notification for a task
      */
     @RequiresPermission(Manifest.permission.SCHEDULE_EXACT_ALARM)
     private void scheduleEventNotification(int eventId, String eventName, String eventDate, String eventTime) {
@@ -358,9 +357,9 @@ public class AddEditEventActivity extends AppCompatActivity {
 
                 // Create intent for notification
                 Intent intent = new Intent(this, EventNotificationReceiver.class);
-                intent.putExtra("EVENT_NAME", eventName);
-                intent.putExtra("EVENT_DATE", eventDate);
-                intent.putExtra("EVENT_TIME", eventTime);
+                intent.putExtra(AppConstants.EXTRA_EVENT_NAME, eventName);
+                intent.putExtra(AppConstants.EXTRA_EVENT_DATE, eventDate);
+                intent.putExtra(AppConstants.EXTRA_EVENT_TIME, eventTime);
 
                 PendingIntent pendingIntent = PendingIntent.getBroadcast(
                         this,
@@ -378,7 +377,7 @@ public class AddEditEventActivity extends AppCompatActivity {
                     );
 
                     Log.i("AddEditEventActivity", "Notification scheduled successfully!");
-                    Toast.makeText(this, "Event reminder set for " + eventDate + " at 9:00 AM", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, "Task reminder set for " + eventDate + " at 9:00 AM", Toast.LENGTH_SHORT).show();
                 } catch (SecurityException e) {
                     Log.e("AddEditEventActivity", "SecurityException: Cannot schedule exact alarm", e);
                     Toast.makeText(this, "Cannot schedule notifications - permission denied", Toast.LENGTH_SHORT).show();
@@ -411,34 +410,32 @@ public class AddEditEventActivity extends AppCompatActivity {
     }
 
     /**
-     * Show confirmation dialog before deleting event
+     * Show confirmation dialog before deleting the task
      */
     private void showDeleteConfirmation() {
         new AlertDialog.Builder(this)
-                .setTitle("Delete Event")
-                .setMessage("Are you sure you want to delete this event?")
-                .setPositiveButton("Delete", (dialog, which) -> {
-                    deleteEvent();
-                })
+                .setTitle("Delete Task")
+                .setMessage("Are you sure you want to delete this task?")
+                .setPositiveButton("Delete", (dialog, which) -> deleteTask())
                 .setNegativeButton("Cancel", null)
                 .show();
     }
 
     /**
-     * Delete the current event from database
+     * Delete the current task from the database
      */
-    private void deleteEvent() {
+    private void deleteTask() {
         // Cancel the scheduled notification
-        cancelEventNotification(eventId);
+        cancelEventNotification(taskId);
 
-        int result = databaseHelper.deleteEvent(eventId);
+        int result = databaseHelper.deleteEvent(taskId);
 
         if (result > 0) {
-            Toast.makeText(this, "Event deleted successfully", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Task deleted successfully", Toast.LENGTH_SHORT).show();
             setResult(RESULT_OK);
             finish();
         } else {
-            Toast.makeText(this, "Failed to delete event", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Failed to delete task", Toast.LENGTH_SHORT).show();
         }
     }
 }

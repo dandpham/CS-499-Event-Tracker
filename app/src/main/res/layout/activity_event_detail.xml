@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fillViewport="true">
@@ -10,21 +11,72 @@
         android:orientation="vertical"
         android:padding="24dp">
 
-        <!-- Event Title -->
+        <!-- Task Name -->
         <TextView
             android:id="@+id/textViewDetailTitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Event Title"
+            tools:text="100-hour inspection"
             android:textSize="28sp"
             android:textStyle="bold"
             android:layout_marginBottom="24dp" />
 
-        <!-- Date Section -->
+        <!-- Tail Number -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Date"
+            android:text="Tail Number"
+            android:textSize="14sp"
+            android:textColor="#666666"
+            android:layout_marginBottom="4dp" />
+
+        <TextView
+            android:id="@+id/textViewDetailTailNumber"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            tools:text="N12345"
+            android:textSize="18sp"
+            android:layout_marginBottom="16dp" />
+
+        <!-- Task Type -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Task Type"
+            android:textSize="14sp"
+            android:textColor="#666666"
+            android:layout_marginBottom="4dp" />
+
+        <TextView
+            android:id="@+id/textViewDetailTaskType"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            tools:text="Inspection"
+            android:textSize="18sp"
+            android:layout_marginBottom="16dp" />
+
+        <!-- Status -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Status"
+            android:textSize="14sp"
+            android:textColor="#666666"
+            android:layout_marginBottom="4dp" />
+
+        <TextView
+            android:id="@+id/textViewDetailStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            tools:text="Open"
+            android:textSize="18sp"
+            android:layout_marginBottom="16dp" />
+
+        <!-- Due Date -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Due Date"
             android:textSize="14sp"
             android:textColor="#666666"
             android:layout_marginBottom="4dp" />
@@ -33,15 +85,15 @@
             android:id="@+id/textViewDetailDate"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Monday, January 15, 2024"
+            tools:text="12/15/2026"
             android:textSize="18sp"
             android:layout_marginBottom="16dp" />
 
-        <!-- Time Section -->
+        <!-- Due Time -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Time"
+            android:text="Due Time"
             android:textSize="14sp"
             android:textColor="#666666"
             android:layout_marginBottom="4dp" />
@@ -50,41 +102,24 @@
             android:id="@+id/textViewDetailTime"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="2:00 PM"
+            tools:text="01:30 PM"
             android:textSize="18sp"
             android:layout_marginBottom="16dp" />
 
-        <!-- Location Section -->
+        <!-- Notes -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Location"
+            android:text="Notes"
             android:textSize="14sp"
             android:textColor="#666666"
             android:layout_marginBottom="4dp" />
 
         <TextView
-            android:id="@+id/textViewDetailLocation"
+            android:id="@+id/textViewDetailNotes"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Conference Room A"
-            android:textSize="18sp"
-            android:layout_marginBottom="16dp" />
-
-        <!-- Description Section -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Description"
-            android:textSize="14sp"
-            android:textColor="#666666"
-            android:layout_marginBottom="4dp" />
-
-        <TextView
-            android:id="@+id/textViewDetailDescription"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Event description will appear here"
+            tools:text="Check oil filter and chip detector"
             android:textSize="16sp"
             android:layout_marginBottom="32dp" />
 
@@ -100,7 +135,7 @@
             android:id="@+id/buttonEdit"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Edit Event"
+            android:text="Edit Task"
             android:minHeight="48dp"
             android:layout_marginBottom="12dp" />
 
@@ -109,7 +144,7 @@
             android:id="@+id/buttonShare"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Share Event"
+            android:text="Share Task"
             android:minHeight="48dp"
             android:layout_marginBottom="12dp"
             style="?attr/materialButtonOutlinedStyle" />
@@ -119,10 +154,10 @@
             android:id="@+id/buttonDelete"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Delete Event"
+            android:text="Delete Task"
             android:minHeight="48dp"
             android:backgroundTint="#D32F2F" />
 
     </LinearLayout>
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+</ScrollView>

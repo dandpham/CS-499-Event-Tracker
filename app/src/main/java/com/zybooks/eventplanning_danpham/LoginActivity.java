@@ -1,7 +1,6 @@
 package com.zybooks.eventplanning_danpham;
 
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
@@ -28,11 +27,8 @@ public class LoginActivity extends AppCompatActivity {
     // Database helper
     private DatabaseHelper databaseHelper;
 
-    // SharedPreferences for storing user session
-    private SharedPreferences sharedPreferences;
-    private static final String PREFS_NAME = "EventTrackerPrefs";
-    private static final String KEY_USER_ID = "user_id";
-    private static final String KEY_USERNAME = "username";
+    // Tracks the logged-in user
+    private SessionManager sessionManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -42,11 +38,11 @@ public class LoginActivity extends AppCompatActivity {
         // Initialize database helper
         databaseHelper = new DatabaseHelper(this);
 
-        // Initialize SharedPreferences
-        sharedPreferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        // Initialize session manager
+        sessionManager = new SessionManager(this);
 
         // Check if user is already logged in
-        if (isUserLoggedIn()) {
+        if (sessionManager.isLoggedIn()) {
             navigateToMainActivity();
             return;
         }
@@ -111,7 +107,7 @@ public class LoginActivity extends AppCompatActivity {
 
         if (user != null) {
             // Login successful
-            saveUserSession(user.getUserId(), user.getUsername());
+            sessionManager.saveSession(user.getUserId(), user.getUsername());
             showProgress(false);
             Toast.makeText(this, "Login successful!", Toast.LENGTH_SHORT).show();
             navigateToMainActivity();
@@ -150,9 +146,9 @@ public class LoginActivity extends AppCompatActivity {
         User newUser = new User(username, password);
         long userId = databaseHelper.addUser(newUser);
 
-        if (userId != -1) {
+        if (userId != AppConstants.NO_ID) {
             // Registration successful
-            saveUserSession((int) userId, username);
+            sessionManager.saveSession((int) userId, username);
             showProgress(false);
             Toast.makeText(this, "Registration successful!", Toast.LENGTH_SHORT).show();
             navigateToMainActivity();
@@ -164,40 +160,17 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     /**
-     * Validate username and password input
+     * Validate username and password input using the shared Validator rules
      * @param username Username input
      * @param password Password input
      * @return true if input is valid, false otherwise
      */
     private boolean validateInput(String username, String password) {
-        // Check for empty username
-        if (username.isEmpty()) {
-            showError("Please enter a username");
-            editTextUsername.requestFocus();
+        String error = Validator.checkLogin(username, password);
+        if (error != null) {
+            showError(error);
             return false;
         }
-
-        // Check username length (minimum 3 characters)
-        if (username.length() < 3) {
-            showError("Username must be at least 3 characters");
-            editTextUsername.requestFocus();
-            return false;
-        }
-
-        // Check for empty password
-        if (password.isEmpty()) {
-            showError("Please enter a password");
-            editTextPassword.requestFocus();
-            return false;
-        }
-
-        // Check password length (minimum 6 characters)
-        if (password.length() < 6) {
-            showError("Password must be at least 6 characters");
-            editTextPassword.requestFocus();
-            return false;
-        }
-
         return true;
     }
 
@@ -218,26 +191,6 @@ public class LoginActivity extends AppCompatActivity {
         progressBar.setVisibility(show ? View.VISIBLE : View.GONE);
         buttonLogin.setEnabled(!show);
         buttonRegister.setEnabled(!show);
-    }
-
-    /**
-     * Save user session to SharedPreferences
-     * @param userId User ID to save
-     * @param username Username to save
-     */
-    private void saveUserSession(int userId, String username) {
-        SharedPreferences.Editor editor = sharedPreferences.edit();
-        editor.putInt(KEY_USER_ID, userId);
-        editor.putString(KEY_USERNAME, username);
-        editor.apply();
-    }
-
-    /**
-     * Check if a user is already logged in
-     * @return true if user session exists, false otherwise
-     */
-    private boolean isUserLoggedIn() {
-        return sharedPreferences.contains(KEY_USER_ID);
     }
 
     /**
