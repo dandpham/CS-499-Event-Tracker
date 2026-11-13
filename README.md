@@ -9,3 +9,6 @@ Enhanced from my CS 360 Event Tracking app for ePortfolio Category 1: Software D
 - Added a SessionManager class to track the logged-in user in one place. Screens no longer pass the user ID to each other through Intents, which removes a way for the wrong ID to reach a screen.
 - Moved all input rules into a Validator class with no Android code, so the rules live in one place and can be unit tested. The current time is passed in rather than read inside the method, so tests always give the same result.
 - The past-date rule only applies to new tasks. Existing tasks can have past due dates, since overdue tasks still need to be edited.
+- Renamed Event to MaintenanceTask and added task type and status fields. Used Android Studio's Refactor > Rename so every reference updated safely.
+- Rewrote onUpgrade() to add new columns with ALTER TABLE instead of dropping all tables, so existing data survives the upgrade. Old events with no location are marked UNASSIGNED for review instead of being deleted.
+- Combined the repeated row-reading code in DatabaseHelper into one cursorToTask() method.
