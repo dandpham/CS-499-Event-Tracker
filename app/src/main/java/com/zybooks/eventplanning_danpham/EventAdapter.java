@@ -14,16 +14,16 @@ import java.util.List;
  * Handles the creation and binding of event card views.
  */
 public class EventAdapter extends RecyclerView.Adapter<EventAdapter.EventViewHolder> {
-    private List<Event> eventList;
+    private List<MaintenanceTask> eventList;
     private OnEventClickListener listener;
 
     /**
      * Interface for handling click events on event items
      */
     public interface OnEventClickListener {
-        void onEventClick(Event event);
-        void onEditClick(Event event);
-        void onDeleteClick(Event event);
+        void onEventClick(MaintenanceTask event);
+        void onEditClick(MaintenanceTask event);
+        void onDeleteClick(MaintenanceTask event);
     }
 
     /**
@@ -31,7 +31,7 @@ public class EventAdapter extends RecyclerView.Adapter<EventAdapter.EventViewHol
      * @param eventList List of events to display
      * @param listener Click listener for event interactions
      */
-    public EventAdapter(List<Event> eventList, OnEventClickListener listener) {
+    public EventAdapter(List<MaintenanceTask> eventList, OnEventClickListener listener) {
         this.eventList = eventList;
         this.listener = listener;
     }
@@ -48,7 +48,7 @@ public class EventAdapter extends RecyclerView.Adapter<EventAdapter.EventViewHol
     @Override
     public void onBindViewHolder(@NonNull EventViewHolder holder, int position) {
         // Get event at current position
-        Event event = eventList.get(position);
+        MaintenanceTask event = eventList.get(position);
 
         // Bind event data to views
         holder.bind(event, listener);
@@ -63,7 +63,7 @@ public class EventAdapter extends RecyclerView.Adapter<EventAdapter.EventViewHol
      * Update the event list and refresh the RecyclerView
      * @param newEventList Updated list of events
      */
-    public void updateEvents(List<Event> newEventList) {
+    public void updateEvents(List<MaintenanceTask> newEventList) {
         this.eventList = newEventList;
         notifyDataSetChanged();
     }
@@ -98,14 +98,14 @@ public class EventAdapter extends RecyclerView.Adapter<EventAdapter.EventViewHol
          * @param event Event object to display
          * @param listener Click listener for interactions
          */
-        public void bind(Event event, OnEventClickListener listener) {
+        public void bind(MaintenanceTask event, OnEventClickListener listener) {
             // Set event information
-            textViewEventName.setText(event.getEventName());
-            textViewEventDate.setText(event.getEventDate());
-            textViewEventLocation.setText(event.getLocation() != null && !event.getLocation().isEmpty()
-                    ? event.getLocation()
+            textViewEventName.setText(event.getTaskName());
+            textViewEventDate.setText(event.getDueDate());
+            textViewEventLocation.setText(event.getTailNumber() != null && !event.getTailNumber().isEmpty()
+                    ? event.getTailNumber()
                     : "No location");
-            textViewEventTime.setText(event.getEventTime());
+            textViewEventTime.setText(event.getDueTime());
 
             // Set click listener for entire card
             itemView.setOnClickListener(new View.OnClickListener() {

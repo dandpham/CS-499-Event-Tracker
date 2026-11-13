@@ -7,17 +7,20 @@ import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import java.util.ArrayList;
 import java.util.List;
-import android.util.Log;
 
 /**
- * DatabaseHelper manages the SQLite database for the Event Tracking application.
- * Handles all CRUD operations for Users and Events tables.
+ * DatabaseHelper manages the SQLite database for the maintenance tracker.
+ * Handles all CRUD operations for the users and tasks tables.
+ *
+ * Note: The tasks table and its columns keep their original "events" names
+ * for now. The full database redesign is planned for the Databases enhancement.
  */
 public class DatabaseHelper extends SQLiteOpenHelper {
 
     // Database information
     private static final String DATABASE_NAME = "EventTracker.db";
-    private static final int DATABASE_VERSION = 1;
+    // Version 2 adds the task_type and status columns
+    private static final int DATABASE_VERSION = 2;
 
     // Users table
     private static final String TABLE_USERS = "users";
@@ -25,15 +28,17 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     private static final String COLUMN_USERNAME = "username";
     private static final String COLUMN_PASSWORD = "password";
 
-    // Events table
+    // Tasks table (originally the events table)
     private static final String TABLE_EVENTS = "events";
     private static final String COLUMN_EVENT_ID = "event_id";
     private static final String COLUMN_EVENT_USER_ID = "user_id";
     private static final String COLUMN_EVENT_NAME = "event_name";
     private static final String COLUMN_EVENT_DATE = "event_date";
     private static final String COLUMN_EVENT_TIME = "event_time";
-    private static final String COLUMN_LOCATION = "location";
-    private static final String COLUMN_DESCRIPTION = "description";// Events table
+    private static final String COLUMN_LOCATION = "location";       // holds the tail number
+    private static final String COLUMN_DESCRIPTION = "description"; // holds the notes
+    private static final String COLUMN_TASK_TYPE = "task_type";     // added in version 2
+    private static final String COLUMN_STATUS = "status";           // added in version 2
 
     // SQL statements to create tables
     private static final String CREATE_USERS_TABLE =
@@ -51,6 +56,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                     COLUMN_EVENT_TIME + " TEXT NOT NULL, " +
                     COLUMN_LOCATION + " TEXT, " +
                     COLUMN_DESCRIPTION + " TEXT, " +
+                    COLUMN_TASK_TYPE + " TEXT NOT NULL DEFAULT '" + MaintenanceTask.TYPE_INSPECTION + "', " +
+                    COLUMN_STATUS + " TEXT NOT NULL DEFAULT '" + MaintenanceTask.STATUS_OPEN + "', " +
                     "FOREIGN KEY(" + COLUMN_EVENT_USER_ID + ") REFERENCES " +
                     TABLE_USERS + "(" + COLUMN_USER_ID + "))";
 
@@ -60,17 +67,27 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
     @Override
     public void onCreate(SQLiteDatabase db) {
-        // Create tables when database is first created
+        // Create tables when the database is first created
         db.execSQL(CREATE_USERS_TABLE);
         db.execSQL(CREATE_EVENTS_TABLE);
     }
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        // Drop existing tables and recreate on version upgrade
-        db.execSQL("DROP TABLE IF EXISTS " + TABLE_EVENTS);
-        db.execSQL("DROP TABLE IF EXISTS " + TABLE_USERS);
-        onCreate(db);
+        // Upgrade one version at a time so existing data is kept.
+        // Android runs onUpgrade inside a transaction, so if any step fails,
+        // the whole upgrade is rolled back and no data is lost.
+        if (oldVersion < 2) {
+            db.execSQL("ALTER TABLE " + TABLE_EVENTS + " ADD COLUMN " + COLUMN_TASK_TYPE +
+                    " TEXT NOT NULL DEFAULT '" + MaintenanceTask.TYPE_INSPECTION + "'");
+            db.execSQL("ALTER TABLE " + TABLE_EVENTS + " ADD COLUMN " + COLUMN_STATUS +
+                    " TEXT NOT NULL DEFAULT '" + MaintenanceTask.STATUS_OPEN + "'");
+
+            // Old events with no location have no aircraft, so flag them for review
+            db.execSQL("UPDATE " + TABLE_EVENTS + " SET " + COLUMN_LOCATION + " = '" +
+                    MaintenanceTask.UNASSIGNED + "' WHERE " + COLUMN_LOCATION +
+                    " IS NULL OR TRIM(" + COLUMN_LOCATION + ") = ''");
+        }
     }
 
     // ===== USER OPERATIONS =====
@@ -108,7 +125,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         Cursor cursor = db.rawQuery(query, new String[]{username, password});
 
         if (cursor.moveToFirst()) {
-            // User found - create User object from cursor data
             int userId = cursor.getInt(cursor.getColumnIndexOrThrow(COLUMN_USER_ID));
             user = new User(userId, username, password);
         }
@@ -135,126 +151,130 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         return exists;
     }
 
-    // ===== EVENT OPERATIONS (CRUD) =====
+    // ===== TASK OPERATIONS (CRUD) =====
 
     /**
-     * CREATE: Add a new event to the database
-     * @param event Event object containing event details
-     * @return event ID of inserted event, or -1 if insertion failed
+     * Put a task's fields into ContentValues for an insert or update
      */
-    public long addEvent(Event event) {
-        SQLiteDatabase db = this.getWritableDatabase();
+    private ContentValues taskToValues(MaintenanceTask task) {
         ContentValues values = new ContentValues();
-        values.put(COLUMN_EVENT_USER_ID, event.getUserId());
-        values.put(COLUMN_EVENT_NAME, event.getEventName());
-        values.put(COLUMN_EVENT_DATE, event.getEventDate());
-        values.put(COLUMN_EVENT_TIME, event.getEventTime());
-        values.put(COLUMN_LOCATION, event.getLocation());
-        values.put(COLUMN_DESCRIPTION, event.getDescription());
-
-        long eventId = db.insert(TABLE_EVENTS, null, values);
-        db.close();
-        return eventId;
+        values.put(COLUMN_EVENT_NAME, task.getTaskName());
+        values.put(COLUMN_EVENT_DATE, task.getDueDate());
+        values.put(COLUMN_EVENT_TIME, task.getDueTime());
+        values.put(COLUMN_LOCATION, task.getTailNumber());
+        values.put(COLUMN_DESCRIPTION, task.getNotes());
+        values.put(COLUMN_TASK_TYPE, task.getTaskType());
+        values.put(COLUMN_STATUS, task.getStatus());
+        return values;
     }
 
     /**
-     * READ: Get all events for a specific user
-     * @param userId User ID to filter events
-     * @return List of Event objects for the user
+     * Build a MaintenanceTask from the cursor's current row.
+     * Replaces the row-reading code that was repeated in two methods.
      */
-    public List<Event> getAllEvents(int userId) {
-        List<Event> eventList = new ArrayList<>();
+    private MaintenanceTask cursorToTask(Cursor cursor) {
+        MaintenanceTask task = new MaintenanceTask(
+                cursor.getInt(cursor.getColumnIndexOrThrow(COLUMN_EVENT_ID)),
+                cursor.getInt(cursor.getColumnIndexOrThrow(COLUMN_EVENT_USER_ID)),
+                cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_EVENT_NAME)),
+                cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_EVENT_DATE)),
+                cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_EVENT_TIME)),
+                cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_LOCATION)),
+                cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_DESCRIPTION)));
+        task.setTaskType(cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_TASK_TYPE)));
+        task.setStatus(cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_STATUS)));
+        return task;
+    }
+
+    /**
+     * CREATE: Add a new task to the database
+     * @param task Task to add
+     * @return ID of the inserted task, or -1 if insertion failed
+     */
+    public long addEvent(MaintenanceTask task) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues values = taskToValues(task);
+        values.put(COLUMN_EVENT_USER_ID, task.getUserId());
+
+        long taskId = db.insert(TABLE_EVENTS, null, values);
+        db.close();
+        return taskId;
+    }
+
+    /**
+     * READ: Get all tasks for a specific user
+     * @param userId User ID to filter tasks
+     * @return List of the user's tasks
+     */
+    public List<MaintenanceTask> getAllEvents(int userId) {
+        List<MaintenanceTask> taskList = new ArrayList<>();
         SQLiteDatabase db = this.getReadableDatabase();
 
-        // Query to get all events for user, ordered by date and time
         String query = "SELECT * FROM " + TABLE_EVENTS +
                 " WHERE " + COLUMN_EVENT_USER_ID + " = ?" +
                 " ORDER BY " + COLUMN_EVENT_DATE + " ASC, " +
                 COLUMN_EVENT_TIME + " ASC";
         Cursor cursor = db.rawQuery(query, new String[]{String.valueOf(userId)});
 
-        // Iterate through cursor and create Event objects
         if (cursor.moveToFirst()) {
             do {
-                int eventId = cursor.getInt(cursor.getColumnIndexOrThrow(COLUMN_EVENT_ID));
-                String eventName = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_EVENT_NAME));
-                String eventDate = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_EVENT_DATE));
-                String eventTime = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_EVENT_TIME));
-                String location = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_LOCATION));
-                String description = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_DESCRIPTION));
-
-                Event event = new Event(eventId, userId, eventName, eventDate,
-                        eventTime, location, description);
-                eventList.add(event);
+                taskList.add(cursorToTask(cursor));
             } while (cursor.moveToNext());
         }
 
         cursor.close();
         db.close();
-        return eventList;
+        return taskList;
     }
 
     /**
-     * READ: Get a single event by ID
-     * @param eventId Event ID to retrieve
-     * @return Event object, or null if not found
+     * READ: Get a single task by ID
+     * @param taskId Task ID to retrieve
+     * @return The task, or null if not found
      */
-    public Event getEvent(int eventId) {
+    public MaintenanceTask getEvent(int taskId) {
         SQLiteDatabase db = this.getReadableDatabase();
-        Event event = null;
+        MaintenanceTask task = null;
 
         String query = "SELECT * FROM " + TABLE_EVENTS +
                 " WHERE " + COLUMN_EVENT_ID + " = ?";
-        Cursor cursor = db.rawQuery(query, new String[]{String.valueOf(eventId)});
+        Cursor cursor = db.rawQuery(query, new String[]{String.valueOf(taskId)});
 
         if (cursor.moveToFirst()) {
-            int userId = cursor.getInt(cursor.getColumnIndexOrThrow(COLUMN_EVENT_USER_ID));
-            String eventName = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_EVENT_NAME));
-            String eventDate = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_EVENT_DATE));
-            String eventTime = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_EVENT_TIME));
-            String location = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_LOCATION));
-            String description = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_DESCRIPTION));
-
-            event = new Event(eventId, userId, eventName, eventDate,
-                    eventTime, location, description);
+            task = cursorToTask(cursor);
         }
 
         cursor.close();
         db.close();
-        return event;
+        return task;
     }
 
     /**
-     * UPDATE: Update an existing event in the database
-     * @param event Event object with updated information
+     * UPDATE: Update an existing task in the database
+     * @param task Task with updated information
      * @return number of rows affected (1 if successful, 0 if failed)
      */
-    public int updateEvent(Event event) {
+    public int updateEvent(MaintenanceTask task) {
         SQLiteDatabase db = this.getWritableDatabase();
-        ContentValues values = new ContentValues();
-        values.put(COLUMN_EVENT_NAME, event.getEventName());
-        values.put(COLUMN_EVENT_DATE, event.getEventDate());
-        values.put(COLUMN_EVENT_TIME, event.getEventTime());
-        values.put(COLUMN_LOCATION, event.getLocation());
-        values.put(COLUMN_DESCRIPTION, event.getDescription());
+        ContentValues values = taskToValues(task);
 
         int rowsAffected = db.update(TABLE_EVENTS, values,
                 COLUMN_EVENT_ID + " = ?",
-                new String[]{String.valueOf(event.getEventId())});
+                new String[]{String.valueOf(task.getTaskId())});
         db.close();
         return rowsAffected;
     }
 
     /**
-     * DELETE: Remove an event from the database
-     * @param eventId Event ID to delete
+     * DELETE: Remove a task from the database
+     * @param taskId Task ID to delete
      * @return number of rows affected (1 if successful, 0 if failed)
      */
-    public int deleteEvent(int eventId) {
+    public int deleteEvent(int taskId) {
         SQLiteDatabase db = this.getWritableDatabase();
         int rowsAffected = db.delete(TABLE_EVENTS,
                 COLUMN_EVENT_ID + " = ?",
-                new String[]{String.valueOf(eventId)});
+                new String[]{String.valueOf(taskId)});
         db.close();
         return rowsAffected;
     }

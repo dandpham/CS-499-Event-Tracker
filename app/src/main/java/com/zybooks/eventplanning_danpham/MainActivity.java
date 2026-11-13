@@ -39,7 +39,7 @@ public class MainActivity extends AppCompatActivity implements EventAdapter.OnEv
     // Data components
     private DatabaseHelper databaseHelper;
     private EventAdapter eventAdapter;
-    private List<Event> eventList;
+    private List<MaintenanceTask> eventList;
     private int currentUserId;
 
     // Tracks the logged-in user
@@ -183,7 +183,7 @@ public class MainActivity extends AppCompatActivity implements EventAdapter.OnEv
      * Handle event card click - navigate to event detail screen
      */
     @Override
-    public void onEventClick(Event event) {
+    public void onEventClick(MaintenanceTask event) {
         Intent intent = new Intent(MainActivity.this, EventDetailActivity.class);
         intent.putExtra(AppConstants.EXTRA_EVENT, event);
         startActivityForResult(intent, REQUEST_VIEW_EVENT);
@@ -193,9 +193,9 @@ public class MainActivity extends AppCompatActivity implements EventAdapter.OnEv
      * Handle edit button click - navigate to edit event screen
      */
     @Override
-    public void onEditClick(Event event) {
+    public void onEditClick(MaintenanceTask event) {
         Intent intent = new Intent(MainActivity.this, AddEditEventActivity.class);
-        intent.putExtra(AppConstants.EXTRA_EVENT_ID, event.getEventId());
+        intent.putExtra(AppConstants.EXTRA_EVENT_ID, event.getTaskId());
         startActivityForResult(intent, REQUEST_EDIT_EVENT);
     }
 
@@ -203,13 +203,13 @@ public class MainActivity extends AppCompatActivity implements EventAdapter.OnEv
      * Handle delete button click - show confirmation dialog
      */
     @Override
-    public void onDeleteClick(Event event) {
+    public void onDeleteClick(MaintenanceTask event) {
         // Show confirmation dialog before deleting
         new AlertDialog.Builder(this)
                 .setTitle("Delete Event")
                 .setMessage("Are you sure you want to delete this event?")
                 .setPositiveButton("Delete", (dialog, which) -> {
-                    deleteEvent(event.getEventId());
+                    deleteEvent(event.getTaskId());
                 })
                 .setNegativeButton("Cancel", null)
                 .show();

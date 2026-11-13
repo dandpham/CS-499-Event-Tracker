@@ -26,7 +26,7 @@ public class EventDetailActivity extends AppCompatActivity {
     private Button buttonShare;
 
     // Data
-    private Event event;
+    private MaintenanceTask event;
     private DatabaseHelper databaseHelper;
 
     private static final int REQUEST_EDIT_EVENT = 1;
@@ -76,20 +76,20 @@ public class EventDetailActivity extends AppCompatActivity {
      * Display event information in UI
      */
     private void displayEventData() {
-        textViewDetailTitle.setText(event.getEventName());
-        textViewDetailDate.setText(event.getEventDate());
-        textViewDetailTime.setText(event.getEventTime());
+        textViewDetailTitle.setText(event.getTaskName());
+        textViewDetailDate.setText(event.getDueDate());
+        textViewDetailTime.setText(event.getDueTime());
 
         // Handle optional location
-        if (event.getLocation() != null && !event.getLocation().isEmpty()) {
-            textViewDetailLocation.setText(event.getLocation());
+        if (event.getTailNumber() != null && !event.getTailNumber().isEmpty()) {
+            textViewDetailLocation.setText(event.getTailNumber());
         } else {
             textViewDetailLocation.setText("No location specified");
         }
 
         // Handle optional description
-        if (event.getDescription() != null && !event.getDescription().isEmpty()) {
-            textViewDetailDescription.setText(event.getDescription());
+        if (event.getNotes() != null && !event.getNotes().isEmpty()) {
+            textViewDetailDescription.setText(event.getNotes());
         } else {
             textViewDetailDescription.setText("No description provided");
         }
@@ -104,7 +104,7 @@ public class EventDetailActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 Intent intent = new Intent(EventDetailActivity.this, AddEditEventActivity.class);
-                intent.putExtra(AppConstants.EXTRA_EVENT_ID, event.getEventId());
+                intent.putExtra(AppConstants.EXTRA_EVENT_ID, event.getTaskId());
                 startActivityForResult(intent, REQUEST_EDIT_EVENT);
             }
         });
@@ -144,7 +144,7 @@ public class EventDetailActivity extends AppCompatActivity {
      * Delete event from database
      */
     private void deleteEvent() {
-        int result = databaseHelper.deleteEvent(event.getEventId());
+        int result = databaseHelper.deleteEvent(event.getTaskId());
 
         if (result > 0) {
             Toast.makeText(this, "Event deleted successfully", Toast.LENGTH_SHORT).show();
@@ -160,22 +160,22 @@ public class EventDetailActivity extends AppCompatActivity {
      */
     private void shareEvent() {
         // Create shareable text with event details
-        String shareText = "Event: " + event.getEventName() + "\n" +
-                "Date: " + event.getEventDate() + "\n" +
-                "Time: " + event.getEventTime() + "\n";
+        String shareText = "Event: " + event.getTaskName() + "\n" +
+                "Date: " + event.getDueDate() + "\n" +
+                "Time: " + event.getDueTime() + "\n";
 
-        if (event.getLocation() != null && !event.getLocation().isEmpty()) {
-            shareText += "Location: " + event.getLocation() + "\n";
+        if (event.getTailNumber() != null && !event.getTailNumber().isEmpty()) {
+            shareText += "Location: " + event.getTailNumber() + "\n";
         }
 
-        if (event.getDescription() != null && !event.getDescription().isEmpty()) {
-            shareText += "Description: " + event.getDescription();
+        if (event.getNotes() != null && !event.getNotes().isEmpty()) {
+            shareText += "Description: " + event.getNotes();
         }
 
         // Create share intent
         Intent shareIntent = new Intent(Intent.ACTION_SEND);
         shareIntent.setType("text/plain");
-        shareIntent.putExtra(Intent.EXTRA_SUBJECT, "Event: " + event.getEventName());
+        shareIntent.putExtra(Intent.EXTRA_SUBJECT, "Event: " + event.getTaskName());
         shareIntent.putExtra(Intent.EXTRA_TEXT, shareText);
 
         // Show share chooser
@@ -191,7 +191,7 @@ public class EventDetailActivity extends AppCompatActivity {
 
         if (requestCode == REQUEST_EDIT_EVENT && resultCode == RESULT_OK) {
             // Reload event data after edit
-            event = databaseHelper.getEvent(event.getEventId());
+            event = databaseHelper.getEvent(event.getTaskId());
             if (event != null) {
                 displayEventData();
                 setResult(RESULT_OK); // Pass result back to MainActivity

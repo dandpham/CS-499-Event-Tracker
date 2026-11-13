@@ -5,7 +5,6 @@ import android.annotation.SuppressLint;
 import android.app.DatePickerDialog;
 import android.app.TimePickerDialog;
 import android.os.Bundle;
-import android.os.Build;
 import android.view.View;
 import android.widget.Button;
 import android.widget.DatePicker;
@@ -13,7 +12,6 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.TimePicker;
 import android.widget.Toast;
-import android.provider.Settings;
 
 import androidx.annotation.RequiresPermission;
 import androidx.appcompat.app.AlertDialog;
@@ -105,17 +103,17 @@ public class AddEditEventActivity extends AppCompatActivity {
      * Load existing event data for editing
      */
     private void loadEventData() {
-        Event existingEvent = databaseHelper.getEvent(eventId);
+        MaintenanceTask existingEvent = databaseHelper.getEvent(eventId);
 
         if (existingEvent != null) {
             textViewScreenTitle.setText("Edit Event");
-            editTextEventName.setText(existingEvent.getEventName());
-            selectedDate = existingEvent.getEventDate();
+            editTextEventName.setText(existingEvent.getTaskName());
+            selectedDate = existingEvent.getDueDate();
             textViewSelectedDate.setText(selectedDate);
-            selectedTime = existingEvent.getEventTime();
+            selectedTime = existingEvent.getDueTime();
             textViewSelectedTime.setText(selectedTime);
-            editTextLocation.setText(existingEvent.getLocation());
-            editTextDescription.setText(existingEvent.getDescription());
+            editTextLocation.setText(existingEvent.getTailNumber());
+            editTextDescription.setText(existingEvent.getNotes());
             buttonDelete.setVisibility(View.VISIBLE);
         }
     }
@@ -249,7 +247,7 @@ public class AddEditEventActivity extends AppCompatActivity {
         // Create or update event
         if (eventId == AppConstants.NO_ID) {
             // Create new event
-            Event newEvent = new Event(userId, eventName, selectedDate, selectedTime, location, description);
+            MaintenanceTask newEvent = new MaintenanceTask(userId, eventName, selectedDate, selectedTime, location, description);
             long result = databaseHelper.addEvent(newEvent);
 
             if (result != AppConstants.NO_ID) {
@@ -264,7 +262,7 @@ public class AddEditEventActivity extends AppCompatActivity {
             }
         } else {
             // Update existing event
-            Event updatedEvent = new Event(eventId, userId, eventName, selectedDate, selectedTime, location, description);
+            MaintenanceTask updatedEvent = new MaintenanceTask(eventId, userId, eventName, selectedDate, selectedTime, location, description);
             int result = databaseHelper.updateEvent(updatedEvent);
 
             if (result > 0) {
