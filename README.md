@@ -13,3 +13,4 @@ Enhanced from my CS 360 Event Tracking app for ePortfolio Category 1: Software D
 - Rewrote onUpgrade() to add new columns with ALTER TABLE instead of dropping all tables, so existing data survives the upgrade. Old events with no location are marked UNASSIGNED for review instead of being deleted.
 - Combined the repeated row-reading code in DatabaseHelper into one cursorToTask() method.
 - Found that every DatabaseHelper method closes the database after each query, which is inefficient. Planned for the Databases enhancement.
+- Updated the dashboard card and detail screen to show tail number, task type, and status, so the app reads as a maintenance tracker throughout.

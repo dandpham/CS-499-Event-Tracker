@@ -14,7 +14,7 @@
         android:orientation="horizontal"
         android:padding="16dp">
 
-        <!-- Event Details -->
+        <!-- Task Details -->
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
@@ -22,39 +22,35 @@
             android:orientation="vertical">
 
             <TextView
-                android:id="@+id/textViewEventName"
+                android:id="@+id/textViewTaskName"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Event Name"
-                tools:text="Team Meeting"
+                tools:text="100-hour inspection"
                 android:textSize="18sp"
                 android:textStyle="bold"
                 android:layout_marginBottom="4dp" />
 
             <TextView
-                android:id="@+id/textViewEventDate"
+                android:id="@+id/textViewTailNumber"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Date"
-                tools:text="12/20/2024"
+                tools:text="Tail: N12345"
                 android:textSize="14sp"
                 android:layout_marginBottom="4dp" />
 
             <TextView
-                android:id="@+id/textViewEventLocation"
+                android:id="@+id/textViewTypeStatus"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Location"
-                tools:text="Conference Room A"
+                tools:text="Inspection | Open"
                 android:textSize="14sp"
                 android:layout_marginBottom="4dp" />
 
             <TextView
-                android:id="@+id/textViewEventTime"
+                android:id="@+id/textViewDueDateTime"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Time"
-                tools:text="2:00 PM"
+                tools:text="Due 12/15/2026 at 01:30 PM"
                 android:textSize="14sp" />
 
         </LinearLayout>

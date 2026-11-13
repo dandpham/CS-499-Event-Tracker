@@ -10,131 +10,101 @@ import androidx.recyclerview.widget.RecyclerView;
 import java.util.List;
 
 /**
- * EventAdapter manages the display of events in a RecyclerView.
- * Handles the creation and binding of event card views.
+ * EventAdapter displays maintenance tasks as cards in a RecyclerView.
+ * Handles creating and binding each task card.
  */
-public class EventAdapter extends RecyclerView.Adapter<EventAdapter.EventViewHolder> {
-    private List<MaintenanceTask> eventList;
-    private OnEventClickListener listener;
+public class EventAdapter extends RecyclerView.Adapter<EventAdapter.TaskViewHolder> {
+    private List<MaintenanceTask> taskList;
+    private final OnEventClickListener listener;
 
     /**
-     * Interface for handling click events on event items
+     * Interface for handling clicks on task cards
      */
     public interface OnEventClickListener {
-        void onEventClick(MaintenanceTask event);
-        void onEditClick(MaintenanceTask event);
-        void onDeleteClick(MaintenanceTask event);
+        void onEventClick(MaintenanceTask task);
+        void onEditClick(MaintenanceTask task);
+        void onDeleteClick(MaintenanceTask task);
     }
 
     /**
-     * Constructor for EventAdapter
-     * @param eventList List of events to display
-     * @param listener Click listener for event interactions
+     * @param taskList List of tasks to display
+     * @param listener Click listener for card interactions
      */
-    public EventAdapter(List<MaintenanceTask> eventList, OnEventClickListener listener) {
-        this.eventList = eventList;
+    public EventAdapter(List<MaintenanceTask> taskList, OnEventClickListener listener) {
+        this.taskList = taskList;
         this.listener = listener;
     }
 
     @NonNull
     @Override
-    public EventViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        // Inflate the item_event layout for each event card
+    public TaskViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+        // Inflate the item_event layout for each task card
         View view = LayoutInflater.from(parent.getContext())
                 .inflate(R.layout.item_event, parent, false);
-        return new EventViewHolder(view);
+        return new TaskViewHolder(view);
     }
 
     @Override
-    public void onBindViewHolder(@NonNull EventViewHolder holder, int position) {
-        // Get event at current position
-        MaintenanceTask event = eventList.get(position);
-
-        // Bind event data to views
-        holder.bind(event, listener);
+    public void onBindViewHolder(@NonNull TaskViewHolder holder, int position) {
+        holder.bind(taskList.get(position), listener);
     }
 
     @Override
     public int getItemCount() {
-        return eventList.size();
+        return taskList.size();
     }
 
     /**
-     * Update the event list and refresh the RecyclerView
-     * @param newEventList Updated list of events
+     * Replace the task list and refresh the RecyclerView
+     * @param newTaskList Updated list of tasks
      */
-    public void updateEvents(List<MaintenanceTask> newEventList) {
-        this.eventList = newEventList;
+    public void updateEvents(List<MaintenanceTask> newTaskList) {
+        this.taskList = newTaskList;
         notifyDataSetChanged();
     }
 
     /**
-     * ViewHolder class for event items
-     * Holds references to all views in an event card
+     * Holds references to all views in one task card
      */
-    static class EventViewHolder extends RecyclerView.ViewHolder {
+    static class TaskViewHolder extends RecyclerView.ViewHolder {
 
-        private TextView textViewEventName;
-        private TextView textViewEventDate;
-        private TextView textViewEventLocation;
-        private TextView textViewEventTime;
-        private Button buttonEdit;
-        private Button buttonDelete;
+        private final TextView textViewTaskName;
+        private final TextView textViewTailNumber;
+        private final TextView textViewTypeStatus;
+        private final TextView textViewDueDateTime;
+        private final Button buttonEdit;
+        private final Button buttonDelete;
 
-        public EventViewHolder(@NonNull View itemView) {
+        public TaskViewHolder(@NonNull View itemView) {
             super(itemView);
-
-            // Initialize views from item_event layout
-            textViewEventName = itemView.findViewById(R.id.textViewEventName);
-            textViewEventDate = itemView.findViewById(R.id.textViewEventDate);
-            textViewEventLocation = itemView.findViewById(R.id.textViewEventLocation);
-            textViewEventTime = itemView.findViewById(R.id.textViewEventTime);
+            textViewTaskName = itemView.findViewById(R.id.textViewTaskName);
+            textViewTailNumber = itemView.findViewById(R.id.textViewTailNumber);
+            textViewTypeStatus = itemView.findViewById(R.id.textViewTypeStatus);
+            textViewDueDateTime = itemView.findViewById(R.id.textViewDueDateTime);
             buttonEdit = itemView.findViewById(R.id.buttonEdit);
             buttonDelete = itemView.findViewById(R.id.buttonDelete);
         }
 
         /**
-         * Bind event data to views and set up click listeners
-         * @param event Event object to display
+         * Show a task's details and set up its click listeners
+         * @param task Task to display
          * @param listener Click listener for interactions
          */
-        public void bind(MaintenanceTask event, OnEventClickListener listener) {
-            // Set event information
-            textViewEventName.setText(event.getTaskName());
-            textViewEventDate.setText(event.getDueDate());
-            textViewEventLocation.setText(event.getTailNumber() != null && !event.getTailNumber().isEmpty()
-                    ? event.getTailNumber()
-                    : "No location");
-            textViewEventTime.setText(event.getDueTime());
+        public void bind(MaintenanceTask task, OnEventClickListener listener) {
+            textViewTaskName.setText(task.getTaskName());
+            textViewTailNumber.setText("Tail: " + task.getTailNumber());
+            textViewTypeStatus.setText(task.getTaskType() + " | " + task.getStatus());
+            textViewDueDateTime.setText("Due " + task.getDueDate() + " at " + task.getDueTime());
 
-            // Set click listener for entire card
-            itemView.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    if (listener != null) {
-                        listener.onEventClick(event);
-                    }
-                }
+            // Card, edit, and delete clicks
+            itemView.setOnClickListener(v -> {
+                if (listener != null) listener.onEventClick(task);
             });
-
-            // Set click listener for edit button
-            buttonEdit.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    if (listener != null) {
-                        listener.onEditClick(event);
-                    }
-                }
+            buttonEdit.setOnClickListener(v -> {
+                if (listener != null) listener.onEditClick(task);
             });
-
-            // Set click listener for delete button
-            buttonDelete.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    if (listener != null) {
-                        listener.onDeleteClick(event);
-                    }
-                }
+            buttonDelete.setOnClickListener(v -> {
+                if (listener != null) listener.onDeleteClick(task);
             });
         }
     }
