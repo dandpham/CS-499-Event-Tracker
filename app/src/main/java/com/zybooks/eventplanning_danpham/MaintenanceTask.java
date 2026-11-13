@@ -3,6 +3,9 @@ package com.zybooks.eventplanning_danpham;
 import android.os.Parcel;
 import android.os.Parcelable;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeParseException;
+
 /**
  * MaintenanceTask represents one aircraft maintenance task.
  * Implements Parcelable so a task can be passed between screens.
@@ -102,6 +105,18 @@ public class MaintenanceTask implements Parcelable {
      */
     public boolean isComplete() {
         return STATUS_COMPLETE.equals(status);
+    }
+
+    /**
+     * Combine the due date and time into one LocalDateTime
+     * @return the due date and time, or null if they can't be read
+     */
+    public LocalDateTime getDueDateTime() {
+        try {
+            return LocalDateTime.parse(dueDate + " " + dueTime, AppConstants.DUE_DATE_TIME_FORMAT);
+        } catch (DateTimeParseException e) {
+            return null;
+        }
     }
 
     // Getters and setters

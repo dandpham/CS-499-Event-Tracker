@@ -14,3 +14,7 @@ Enhanced from my CS 360 Event Tracking app for ePortfolio Category 1: Software D
 - Combined the repeated row-reading code in DatabaseHelper into one cursorToTask() method.
 - Found that every DatabaseHelper method closes the database after each query, which is inefficient. Planned for the Databases enhancement.
 - Updated the dashboard card and detail screen to show tail number, task type, and status, so the app reads as a maintenance tracker throughout.
+- Added a TaskRepository interface and a SqliteTaskRepository class. The repository is the only class that talks to DatabaseHelper, and it runs all database work on one background thread (ExecutorService) so the screen never freezes. Results return to the main thread through callbacks.
+- ViewModels will depend on the TaskRepository interface rather than the SQLite class, so tests can use a fake repository without a database.
+- Moved all reminder code into one ReminderScheduler class. Reminders now fire 60 minutes before the due time instead of at a hard-coded 9:00 AM, and the repository always cancels a task's reminder when it deletes the task, which fixes the bug where deleting from the detail screen left the reminder active.
+- Replaced the Calendar date parsing with java.time and one shared date format in AppConstants.

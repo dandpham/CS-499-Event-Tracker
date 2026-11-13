@@ -1,5 +1,8 @@
 package com.zybooks.eventplanning_danpham;
 
+import java.time.format.DateTimeFormatter;
+import java.util.Locale;
+
 /**
  * Shared constants used across the app, kept in one place
  * so each value is defined only once.
@@ -25,8 +28,10 @@ public final class AppConstants {
     public static final String EXTRA_EVENT_TIME = "EVENT_TIME";
 
     // IDs
-    public static final int NO_ID = -1; // means "not ID yet", such as a new event
+    public static final int NO_ID = -1; // means "no ID yet," such as a new task
+
+    // How due dates and times are stored, such as "12/15/2026 01:30 PM".
+    // Matches the format the date and time pickers produce.
+    public static final DateTimeFormatter DUE_DATE_TIME_FORMAT =
+            DateTimeFormatter.ofPattern("MM/dd/yyyy hh:mm a", Locale.US);
 }
-
-
-
