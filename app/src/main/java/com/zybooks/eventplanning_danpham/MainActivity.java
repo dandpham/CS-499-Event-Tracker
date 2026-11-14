@@ -11,6 +11,7 @@ import android.widget.Toast;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
+import androidx.appcompat.widget.SearchView;
 import androidx.appcompat.widget.Toolbar;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -140,6 +141,9 @@ public class MainActivity extends AppCompatActivity implements EventAdapter.OnEv
 
             // Show or hide the empty state message
             boolean empty = items.isEmpty();
+            textViewEmptyState.setText(viewModel.isSearching()
+                    ? "No tasks match your search."
+                    : "No tasks yet.\nTap the + button to add your first task!");
             textViewEmptyState.setVisibility(empty ? View.VISIBLE : View.GONE);
             recyclerViewEvents.setVisibility(empty ? View.GONE : View.VISIBLE);
         });
@@ -194,11 +198,40 @@ public class MainActivity extends AppCompatActivity implements EventAdapter.OnEv
     }
 
     /**
-     * Create options menu in toolbar
+     * Create the toolbar menu and set up the search box
      */
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.main_menu, menu);
+        if (viewModel == null) {
+            return true;
+        }
+
+        MenuItem searchItem = menu.findItem(R.id.action_search);
+        SearchView searchView = (SearchView) searchItem.getActionView();
+        searchView.setQueryHint("Search tail number, task, or notes");
+
+        // Keep an active search after the screen rotates
+        String currentQuery = viewModel.getSearchQuery();
+        if (!currentQuery.isEmpty()) {
+            searchItem.expandActionView();
+            searchView.setQuery(currentQuery, false);
+        }
+
+        // Filter the list as the user types
+        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+            @Override
+            public boolean onQueryTextSubmit(String query) {
+                searchView.clearFocus(); // Hide the keyboard
+                return true;
+            }
+
+            @Override
+            public boolean onQueryTextChange(String newText) {
+                viewModel.setSearchQuery(newText);
+                return true;
+            }
+        });
         return true;
     }
 

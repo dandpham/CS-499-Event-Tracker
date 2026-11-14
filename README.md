@@ -28,3 +28,8 @@ Enhanced from my CS 360 Event Tracking app for ePortfolio Category 1: Software D
 - The detail screen receives a task ID and loads the task through the ViewModel, instead of receiving a copy that could be out of date.
 - Overdue tasks show in red and completed tasks are faded. The ViewModel decides what's overdue, and the adapter only displays it.
 - If exact alarm permission is off, saving asks the user to open Settings or save without a reminder, instead of showing a dialog and closing the screen behind it.
+- Added keyword search to the dashboard. It filters the tasks the ViewModel already loaded, matching name, tail number, notes, type, or status, so no database change was needed. This is a linear scan, which is fine for one user's tasks. A database-level search with an index is planned for the Databases enhancement.
+- The search text lives in the ViewModel, so an active search survives a screen rotation.
+- Tested both ViewModels with a FakeTaskRepository that stores tasks in a list, so the 26 ViewModel tests run in seconds without a device or database. This works because the ViewModels depend on the TaskRepository interface. Tests use a fixed time so overdue checks are repeatable.
+- Two tests use the exact dates that sorted wrong in the original app(January 2027 before December 2026, and 1:00 PM before 11:00 AM) to prove the sorting bug is fixed on screen.
+- Total test count went from 1 placeholder test to 48 real tests.
