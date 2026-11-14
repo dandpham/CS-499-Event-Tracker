@@ -1,16 +1,12 @@
 package com.zybooks.eventplanning_danpham;
 
-import android.os.Parcel;
-import android.os.Parcelable;
-
 import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
 
 /**
  * MaintenanceTask represents one aircraft maintenance task.
- * Implements Parcelable so a task can be passed between screens.
  */
-public class MaintenanceTask implements Parcelable {
+public class MaintenanceTask {
 
     // Task types
     public static final String TYPE_INSPECTION = "Inspection";
@@ -54,50 +50,6 @@ public class MaintenanceTask implements Parcelable {
                            String dueTime, String tailNumber, String notes) {
         this(userId, taskName, dueDate, dueTime, tailNumber, notes);
         this.taskId = taskId;
-    }
-
-    // Parcelable implementation for passing tasks between screens
-    protected MaintenanceTask(Parcel in) {
-        taskId = in.readInt();
-        userId = in.readInt();
-        taskName = in.readString();
-        dueDate = in.readString();
-        dueTime = in.readString();
-        tailNumber = in.readString();
-        notes = in.readString();
-        taskType = in.readString();
-        status = in.readString();
-    }
-
-    public static final Creator<MaintenanceTask> CREATOR = new Creator<MaintenanceTask>() {
-        @Override
-        public MaintenanceTask createFromParcel(Parcel in) {
-            return new MaintenanceTask(in);
-        }
-
-        @Override
-        public MaintenanceTask[] newArray(int size) {
-            return new MaintenanceTask[size];
-        }
-    };
-
-    @Override
-    public int describeContents() {
-        return 0;
-    }
-
-    @Override
-    public void writeToParcel(Parcel dest, int flags) {
-        // Must write in the same order the Parcel constructor reads
-        dest.writeInt(taskId);
-        dest.writeInt(userId);
-        dest.writeString(taskName);
-        dest.writeString(dueDate);
-        dest.writeString(dueTime);
-        dest.writeString(tailNumber);
-        dest.writeString(notes);
-        dest.writeString(taskType);
-        dest.writeString(status);
     }
 
     /**

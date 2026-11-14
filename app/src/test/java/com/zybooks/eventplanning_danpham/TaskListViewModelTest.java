@@ -1,5 +1,10 @@
 package com.zybooks.eventplanning_danpham;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule;
 
 import org.junit.Before;
@@ -8,11 +13,6 @@ import org.junit.Test;
 
 import java.time.LocalDateTime;
 import java.util.List;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
 
 /**
  * Unit tests for TaskListViewModel, using a fake repository and a fixed time

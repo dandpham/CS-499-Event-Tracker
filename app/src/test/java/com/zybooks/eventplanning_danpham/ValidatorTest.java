@@ -1,11 +1,11 @@
 package com.zybooks.eventplanning_danpham;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+
 import org.junit.Test;
 
 import java.time.LocalDateTime;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
 
 /**
  * Unit tests for the Validator class

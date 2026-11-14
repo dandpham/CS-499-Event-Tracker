@@ -8,63 +8,53 @@ import android.util.Log;
 import android.widget.Toast;
 
 /**
- * BroadcastReceiver that triggers SMS notifications for events
+ * EventNotificationReceiver runs when a task's reminder fires.
+ * It sends an SMS reminder when SMS permission is granted,
+ * and always shows an on-screen reminder.
  */
 public class EventNotificationReceiver extends BroadcastReceiver {
 
     private static final String TAG = "EventNotificationReceiver";
 
+    // The Android emulator's built-in test number. A production version of this
+    // app would let the user enter their own phone number in Settings.
+    private static final String TEST_PHONE_NUMBER = "5556";
+
     @Override
     public void onReceive(Context context, Intent intent) {
-        Log.i(TAG, "Event notification triggered");
+        // Get task details from the reminder
+        String taskName = intent.getStringExtra(AppConstants.EXTRA_EVENT_NAME);
+        String dueDate = intent.getStringExtra(AppConstants.EXTRA_EVENT_DATE);
+        String dueTime = intent.getStringExtra(AppConstants.EXTRA_EVENT_TIME);
 
-        // Get event details from intent
-        String eventName = intent.getStringExtra(AppConstants.EXTRA_EVENT_NAME);
-        String eventDate = intent.getStringExtra(AppConstants.EXTRA_EVENT_DATE);
-        String eventTime = intent.getStringExtra(AppConstants.EXTRA_EVENT_TIME);
+        Log.i(TAG, "Reminder for task: " + taskName + " due " + dueDate + " at " + dueTime);
 
-        Log.i(TAG, "Event: " + eventName + " on " + eventDate + " at " + eventTime);
-
-        // Check if notifications are enabled
+        // Respect the notifications setting
         SharedPreferences prefs = context.getSharedPreferences(AppConstants.PREFS_NAME, Context.MODE_PRIVATE);
         boolean notificationsEnabled = prefs.getBoolean(AppConstants.KEY_NOTIFICATIONS_ENABLED, true);
-
         if (!notificationsEnabled) {
             Log.i(TAG, "Notifications disabled in settings");
             return;
         }
 
-        // Send SMS notification
+        // Send an SMS reminder if permission is granted
         SmsHelper smsHelper = new SmsHelper(context);
-
-        if (smsHelper.hasSmsPermission()) {
-            Log.i(TAG, "SMS permission granted - sending notification");
-
-            // Use emulator test number or get from user settings in production
-            String phoneNumber = "5556";
-
-            boolean sent = smsHelper.sendEventNotification(phoneNumber, eventName, eventDate, eventTime);
-
-            if (sent) {
-                Log.i(TAG, "SMS notification sent successfully");
-                Toast.makeText(context, "Event Reminder: " + eventName, Toast.LENGTH_LONG).show();
-            } else {
-                Log.e(TAG, "Failed to send SMS notification");
-                showSystemNotification(context, eventName, eventDate, eventTime);
-            }
+        if (smsHelper.hasSmsPermission()
+                && smsHelper.sendEventNotification(TEST_PHONE_NUMBER, taskName, dueDate, dueTime)) {
+            Log.i(TAG, "SMS reminder sent");
         } else {
-            Log.w(TAG, "SMS permission not granted - using fallback notification");
-            showSystemNotification(context, eventName, eventDate, eventTime);
+            Log.w(TAG, "SMS not available, showing on-screen reminder only");
         }
+
+        showReminderToast(context, taskName, dueTime);
     }
 
     /**
-     * Show system notification as fallback when SMS is not available
+     * Show a short on-screen reminder
      */
-    private void showSystemNotification(Context context, String eventName, String eventDate, String eventTime) {
-        Log.i(TAG, "Showing system notification");
+    private void showReminderToast(Context context, String taskName, String dueTime) {
         Toast.makeText(context,
-                "Event Reminder: " + eventName + " at " + eventTime,
+                "Task Reminder: " + taskName + " is due at " + dueTime,
                 Toast.LENGTH_LONG).show();
     }
 }
