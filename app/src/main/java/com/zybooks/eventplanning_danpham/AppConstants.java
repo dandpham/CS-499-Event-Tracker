@@ -22,7 +22,6 @@ public final class AppConstants {
 
     // Intent extras
     public static final String EXTRA_EVENT_ID = "EVENT_ID";
-    public static final String EXTRA_EVENT = "EVENT";
     public static final String EXTRA_EVENT_NAME = "EVENT_NAME";
     public static final String EXTRA_EVENT_DATE = "EVENT_DATE";
     public static final String EXTRA_EVENT_TIME = "EVENT_TIME";

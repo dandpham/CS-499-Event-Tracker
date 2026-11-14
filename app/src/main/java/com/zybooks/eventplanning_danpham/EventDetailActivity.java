@@ -7,10 +7,11 @@ import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.lifecycle.ViewModelProvider;
 
 /**
- * EventDetailActivity displays complete information for a single maintenance task.
- * Provides options to edit, delete, or share the task.
+ * EventDetailActivity shows one maintenance task's full details.
+ * It loads the task through TaskViewModel, so it always shows the latest data.
  */
 public class EventDetailActivity extends AppCompatActivity {
 
@@ -26,32 +27,41 @@ public class EventDetailActivity extends AppCompatActivity {
     private Button buttonDelete;
     private Button buttonShare;
 
-    // Data
-    private MaintenanceTask task;
-    private DatabaseHelper databaseHelper;
-
-    private static final int REQUEST_EDIT_TASK = 1;
+    // Logic and data
+    private TaskViewModel viewModel;
+    private int taskId;
+    private MaintenanceTask currentTask; // The task on screen, used for sharing
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_event_detail);
 
-        // Initialize database helper
-        databaseHelper = new DatabaseHelper(this);
-
-        // Get task from intent
-        task = getIntent().getParcelableExtra(AppConstants.EXTRA_EVENT);
-
-        if (task == null) {
+        taskId = getIntent().getIntExtra(AppConstants.EXTRA_EVENT_ID, AppConstants.NO_ID);
+        if (taskId == AppConstants.NO_ID) {
             Toast.makeText(this, "Error loading task", Toast.LENGTH_SHORT).show();
             finish();
             return;
         }
 
+        viewModel = new ViewModelProvider(this, new ViewModelFactory(this))
+                .get(TaskViewModel.class);
+
         initializeViews();
-        displayTaskData();
         setupListeners();
+        observeViewModel();
+    }
+
+    /**
+     * Reload the task whenever this screen appears,
+     * so changes made on the edit screen show up right away
+     */
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (viewModel != null) {
+            viewModel.loadTask(taskId);
+        }
     }
 
     /**
@@ -71,9 +81,53 @@ public class EventDetailActivity extends AppCompatActivity {
     }
 
     /**
+     * Set up button click listeners
+     */
+    private void setupListeners() {
+        buttonEdit.setOnClickListener(v -> {
+            Intent intent = new Intent(EventDetailActivity.this, AddEditEventActivity.class);
+            intent.putExtra(AppConstants.EXTRA_EVENT_ID, taskId);
+            startActivity(intent);
+        });
+        buttonDelete.setOnClickListener(v -> showDeleteConfirmation());
+        buttonShare.setOnClickListener(v -> shareTask());
+    }
+
+    /**
+     * Update the screen whenever the ViewModel's data changes
+     */
+    private void observeViewModel() {
+        viewModel.getTask().observe(this, this::displayTaskData);
+
+        viewModel.getErrorMessage().observe(this, error -> {
+            if (error != null) {
+                Toast.makeText(this, error, Toast.LENGTH_SHORT).show();
+                viewModel.clearError();
+                // If the task never loaded, there's nothing to show
+                if (currentTask == null) {
+                    finish();
+                }
+            }
+        });
+
+        // The task was deleted, so close the screen
+        viewModel.getDoneMessage().observe(this, message -> {
+            if (message != null) {
+                Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
+                finish();
+            }
+        });
+    }
+
+    /**
      * Display task information on screen
      */
-    private void displayTaskData() {
+    private void displayTaskData(MaintenanceTask task) {
+        if (task == null) {
+            return;
+        }
+        currentTask = task;
+
         textViewDetailTitle.setText(task.getTaskName());
         textViewDetailTailNumber.setText(task.getTailNumber());
         textViewDetailTaskType.setText(task.getTaskType());
@@ -90,83 +144,40 @@ public class EventDetailActivity extends AppCompatActivity {
     }
 
     /**
-     * Set up button click listeners
-     */
-    private void setupListeners() {
-        buttonEdit.setOnClickListener(v -> {
-            Intent intent = new Intent(EventDetailActivity.this, AddEditEventActivity.class);
-            intent.putExtra(AppConstants.EXTRA_EVENT_ID, task.getTaskId());
-            startActivityForResult(intent, REQUEST_EDIT_TASK);
-        });
-        buttonDelete.setOnClickListener(v -> showDeleteConfirmation());
-        buttonShare.setOnClickListener(v -> shareTask());
-    }
-
-    /**
      * Show confirmation dialog before deleting the task
      */
     private void showDeleteConfirmation() {
         new AlertDialog.Builder(this)
                 .setTitle("Delete Task")
                 .setMessage("Are you sure you want to delete this task?")
-                .setPositiveButton("Delete", (dialog, which) -> deleteTask())
+                .setPositiveButton("Delete", (dialog, which) -> viewModel.deleteTask(taskId))
                 .setNegativeButton("Cancel", null)
                 .show();
-    }
-
-    /**
-     * Delete the task from the database
-     */
-    private void deleteTask() {
-        int result = databaseHelper.deleteEvent(task.getTaskId());
-
-        if (result > 0) {
-            Toast.makeText(this, "Task deleted successfully", Toast.LENGTH_SHORT).show();
-            setResult(RESULT_OK);
-            finish();
-        } else {
-            Toast.makeText(this, "Failed to delete task", Toast.LENGTH_SHORT).show();
-        }
     }
 
     /**
      * Share task details using the Android share sheet
      */
     private void shareTask() {
-        String shareText = "Task: " + task.getTaskName() + "\n" +
-                "Tail Number: " + task.getTailNumber() + "\n" +
-                "Type: " + task.getTaskType() + "\n" +
-                "Status: " + task.getStatus() + "\n" +
-                "Due: " + task.getDueDate() + " at " + task.getDueTime() + "\n";
+        if (currentTask == null) {
+            return;
+        }
 
-        if (task.getNotes() != null && !task.getNotes().isEmpty()) {
-            shareText += "Notes: " + task.getNotes();
+        String shareText = "Task: " + currentTask.getTaskName() + "\n" +
+                "Tail Number: " + currentTask.getTailNumber() + "\n" +
+                "Type: " + currentTask.getTaskType() + "\n" +
+                "Status: " + currentTask.getStatus() + "\n" +
+                "Due: " + currentTask.getDueDate() + " at " + currentTask.getDueTime() + "\n";
+
+        if (currentTask.getNotes() != null && !currentTask.getNotes().isEmpty()) {
+            shareText += "Notes: " + currentTask.getNotes();
         }
 
         Intent shareIntent = new Intent(Intent.ACTION_SEND);
         shareIntent.setType("text/plain");
-        shareIntent.putExtra(Intent.EXTRA_SUBJECT, "Maintenance Task: " + task.getTaskName());
+        shareIntent.putExtra(Intent.EXTRA_SUBJECT, "Maintenance Task: " + currentTask.getTaskName());
         shareIntent.putExtra(Intent.EXTRA_TEXT, shareText);
 
         startActivity(Intent.createChooser(shareIntent, "Share task via"));
-    }
-
-    /**
-     * Reload the task after it's edited
-     */
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-
-        if (requestCode == REQUEST_EDIT_TASK && resultCode == RESULT_OK) {
-            task = databaseHelper.getEvent(task.getTaskId());
-            if (task != null) {
-                displayTaskData();
-                setResult(RESULT_OK); // Pass result back to MainActivity
-            } else {
-                // Task was deleted from the edit screen
-                finish();
-            }
-        }
     }
 }

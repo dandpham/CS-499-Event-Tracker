@@ -22,3 +22,9 @@ Enhanced from my CS 360 Event Tracking app for ePortfolio Category 1: Software D
 - The dashboard now sorts by real dates in the ViewModel, which fixes tasks appearing out of order across years, even though the database still stores dates as text (to be fixed in the Databases enhancement).
 - ViewModels receive the current time through a Supplier, so overdue checks can be tested with a fixed time.
 - Login and registration still query the database on the main thread. Moving them to a UserRepository is planned for the Databases enhancement.
+- The Activities now only display data from the ViewModels and pass user actions to them. They no longer use DatabaseHelper or AlarmManager directly. AddEditEventActivity went from about 440 lines to about 230.
+- Delete logic, which was written three times, now exists once in the repository. This fixed the bug where deleting from the detail screen left the reminder active.
+- Replaced the deprecated startActivityForResult with reloading in onResume(), so every screen shows the latest data when it reappears.
+- The detail screen receives a task ID and loads the task through the ViewModel, instead of receiving a copy that could be out of date.
+- Overdue tasks show in red and completed tasks are faded. The ViewModel decides what's overdue, and the adapter only displays it.
+- If exact alarm permission is off, saving asks the user to open Settings or save without a reminder, instead of showing a dialog and closing the screen behind it.

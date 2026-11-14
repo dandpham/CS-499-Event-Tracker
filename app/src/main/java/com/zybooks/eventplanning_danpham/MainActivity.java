@@ -1,8 +1,5 @@
 package com.zybooks.eventplanning_danpham;
 
-import android.app.AlarmManager;
-import android.app.PendingIntent;
-import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
@@ -15,16 +12,16 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.appcompat.widget.Toolbar;
+import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import java.util.ArrayList;
-import java.util.List;
 
 /**
  * MainActivity displays the dashboard of the user's maintenance tasks.
- * Allows users to view, add, edit, and delete tasks.
+ * It only shows what TaskListViewModel provides and passes user actions to it.
  */
 public class MainActivity extends AppCompatActivity implements EventAdapter.OnEventClickListener {
 
@@ -34,20 +31,11 @@ public class MainActivity extends AppCompatActivity implements EventAdapter.OnEv
     private SwipeRefreshLayout swipeRefreshLayout;
     private FloatingActionButton fabAddEvent;
     private Toolbar toolbar;
-
-    // Data components
-    private DatabaseHelper databaseHelper;
     private EventAdapter taskAdapter;
-    private List<MaintenanceTask> taskList;
-    private int currentUserId;
 
-    // Tracks the logged-in user
-    private SessionManager sessionManager;
-
-    // Request codes for activities
-    private static final int REQUEST_ADD_TASK = 1;
-    private static final int REQUEST_EDIT_TASK = 2;
-    private static final int REQUEST_VIEW_TASK = 3;
+    // Logic and data
+    private TaskListViewModel viewModel;
+    private int currentUserId = AppConstants.NO_ID;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -58,24 +46,35 @@ public class MainActivity extends AppCompatActivity implements EventAdapter.OnEv
 
         setContentView(R.layout.activity_main_dashboard);
 
-        // Check if user is logged in
-        sessionManager = new SessionManager(this);
+        // Send the user to login if nobody is logged in
+        SessionManager sessionManager = new SessionManager(this);
         if (!sessionManager.isLoggedIn()) {
             navigateToLogin();
             return;
         }
-
-        // Get the logged-in user's ID
         currentUserId = sessionManager.getUserId();
 
-        // Initialize database helper
-        databaseHelper = new DatabaseHelper(this);
+        // Get the ViewModel. Android keeps the same one when the screen rotates.
+        viewModel = new ViewModelProvider(this, new ViewModelFactory(this))
+                .get(TaskListViewModel.class);
 
         initializeViews();
-        setupToolbar();
+        setSupportActionBar(toolbar);
         setupRecyclerView();
-        loadTasks();
         setupListeners();
+        observeViewModel();
+    }
+
+    /**
+     * Reload tasks whenever this screen appears, including after
+     * returning from the add, edit, or detail screens
+     */
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (viewModel != null) {
+            viewModel.loadTasks(currentUserId);
+        }
     }
 
     /**
@@ -113,18 +112,10 @@ public class MainActivity extends AppCompatActivity implements EventAdapter.OnEv
     }
 
     /**
-     * Set up the toolbar with menu
-     */
-    private void setupToolbar() {
-        setSupportActionBar(toolbar);
-    }
-
-    /**
      * Set up RecyclerView with adapter and layout manager
      */
     private void setupRecyclerView() {
-        taskList = new ArrayList<>();
-        taskAdapter = new EventAdapter(taskList, this);
+        taskAdapter = new EventAdapter(new ArrayList<>(), this);
         recyclerViewEvents.setAdapter(taskAdapter);
         recyclerViewEvents.setLayoutManager(new LinearLayoutManager(this));
     }
@@ -133,34 +124,40 @@ public class MainActivity extends AppCompatActivity implements EventAdapter.OnEv
      * Set up click listeners for the add button and swipe refresh
      */
     private void setupListeners() {
-        // Add button opens the add task screen
-        fabAddEvent.setOnClickListener(v -> {
-            Intent intent = new Intent(MainActivity.this, AddEditEventActivity.class);
-            startActivityForResult(intent, REQUEST_ADD_TASK);
-        });
+        fabAddEvent.setOnClickListener(v ->
+                startActivity(new Intent(MainActivity.this, AddEditEventActivity.class)));
 
-        // Swipe down to reload tasks
-        swipeRefreshLayout.setOnRefreshListener(() -> {
-            loadTasks();
-            swipeRefreshLayout.setRefreshing(false);
-        });
+        swipeRefreshLayout.setOnRefreshListener(() -> viewModel.loadTasks(currentUserId));
     }
 
     /**
-     * Load all tasks for the current user from the database
+     * Update the screen whenever the ViewModel's data changes
      */
-    private void loadTasks() {
-        taskList = databaseHelper.getAllEvents(currentUserId);
-        taskAdapter.updateEvents(taskList);
+    private void observeViewModel() {
+        viewModel.getTasks().observe(this, items -> {
+            taskAdapter.updateItems(items);
+            swipeRefreshLayout.setRefreshing(false);
 
-        // Show or hide the empty state message
-        if (taskList.isEmpty()) {
-            textViewEmptyState.setVisibility(View.VISIBLE);
-            recyclerViewEvents.setVisibility(View.GONE);
-        } else {
-            textViewEmptyState.setVisibility(View.GONE);
-            recyclerViewEvents.setVisibility(View.VISIBLE);
-        }
+            // Show or hide the empty state message
+            boolean empty = items.isEmpty();
+            textViewEmptyState.setVisibility(empty ? View.VISIBLE : View.GONE);
+            recyclerViewEvents.setVisibility(empty ? View.GONE : View.VISIBLE);
+        });
+
+        viewModel.getMessage().observe(this, message -> {
+            if (message != null) {
+                Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
+                viewModel.clearMessages();
+            }
+        });
+
+        viewModel.getErrorMessage().observe(this, error -> {
+            if (error != null) {
+                swipeRefreshLayout.setRefreshing(false);
+                Toast.makeText(this, error, Toast.LENGTH_SHORT).show();
+                viewModel.clearMessages();
+            }
+        });
     }
 
     /**
@@ -169,8 +166,8 @@ public class MainActivity extends AppCompatActivity implements EventAdapter.OnEv
     @Override
     public void onEventClick(MaintenanceTask task) {
         Intent intent = new Intent(MainActivity.this, EventDetailActivity.class);
-        intent.putExtra(AppConstants.EXTRA_EVENT, task);
-        startActivityForResult(intent, REQUEST_VIEW_TASK);
+        intent.putExtra(AppConstants.EXTRA_EVENT_ID, task.getTaskId());
+        startActivity(intent);
     }
 
     /**
@@ -180,56 +177,20 @@ public class MainActivity extends AppCompatActivity implements EventAdapter.OnEv
     public void onEditClick(MaintenanceTask task) {
         Intent intent = new Intent(MainActivity.this, AddEditEventActivity.class);
         intent.putExtra(AppConstants.EXTRA_EVENT_ID, task.getTaskId());
-        startActivityForResult(intent, REQUEST_EDIT_TASK);
+        startActivity(intent);
     }
 
     /**
-     * Tapping Delete asks for confirmation first
+     * Tapping Delete asks for confirmation, then lets the ViewModel delete it
      */
     @Override
     public void onDeleteClick(MaintenanceTask task) {
         new AlertDialog.Builder(this)
                 .setTitle("Delete Task")
                 .setMessage("Are you sure you want to delete this task?")
-                .setPositiveButton("Delete", (dialog, which) -> deleteTask(task.getTaskId()))
+                .setPositiveButton("Delete", (dialog, which) -> viewModel.deleteTask(task.getTaskId()))
                 .setNegativeButton("Cancel", null)
                 .show();
-    }
-
-    /**
-     * Delete a task from the database
-     * @param taskId ID of the task to delete
-     */
-    private void deleteTask(int taskId) {
-        // Cancel scheduled notification
-        cancelEventNotification(taskId);
-
-        int rowsDeleted = databaseHelper.deleteEvent(taskId);
-
-        if (rowsDeleted > 0) {
-            Toast.makeText(this, "Task deleted", Toast.LENGTH_SHORT).show();
-            loadTasks(); // Refresh the list
-        } else {
-            Toast.makeText(this, "Failed to delete task", Toast.LENGTH_SHORT).show();
-        }
-    }
-
-    /**
-     * Cancel a scheduled notification
-     */
-    private void cancelEventNotification(int taskId) {
-        Intent intent = new Intent(this, EventNotificationReceiver.class);
-        PendingIntent pendingIntent = PendingIntent.getBroadcast(
-                this,
-                taskId,
-                intent,
-                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
-        );
-
-        AlarmManager alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
-        if (alarmManager != null) {
-            alarmManager.cancel(pendingIntent);
-        }
     }
 
     /**
@@ -251,26 +212,6 @@ public class MainActivity extends AppCompatActivity implements EventAdapter.OnEv
             return true;
         }
         return super.onOptionsItemSelected(item);
-    }
-
-    /**
-     * Reload tasks after an add, edit, or delete
-     */
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (resultCode == RESULT_OK) {
-            loadTasks();
-        }
-    }
-
-    /**
-     * Reload tasks when returning to this screen
-     */
-    @Override
-    protected void onResume() {
-        super.onResume();
-        loadTasks();
     }
 
     /**

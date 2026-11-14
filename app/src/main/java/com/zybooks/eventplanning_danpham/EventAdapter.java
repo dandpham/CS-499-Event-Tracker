@@ -11,10 +11,15 @@ import java.util.List;
 
 /**
  * EventAdapter displays maintenance tasks as cards in a RecyclerView.
- * Handles creating and binding each task card.
+ * Overdue tasks are shown in red, and completed tasks are faded.
  */
 public class EventAdapter extends RecyclerView.Adapter<EventAdapter.TaskViewHolder> {
-    private List<MaintenanceTask> taskList;
+
+    private static final int OVERDUE_COLOR = 0xFFD32F2F; // Red
+    private static final float COMPLETED_ALPHA = 0.6f;   // Faded
+    private static final float NORMAL_ALPHA = 1.0f;
+
+    private List<TaskListItem> items;
     private final OnEventClickListener listener;
 
     /**
@@ -27,11 +32,11 @@ public class EventAdapter extends RecyclerView.Adapter<EventAdapter.TaskViewHold
     }
 
     /**
-     * @param taskList List of tasks to display
+     * @param items Tasks to display, with their overdue flags
      * @param listener Click listener for card interactions
      */
-    public EventAdapter(List<MaintenanceTask> taskList, OnEventClickListener listener) {
-        this.taskList = taskList;
+    public EventAdapter(List<TaskListItem> items, OnEventClickListener listener) {
+        this.items = items;
         this.listener = listener;
     }
 
@@ -46,20 +51,20 @@ public class EventAdapter extends RecyclerView.Adapter<EventAdapter.TaskViewHold
 
     @Override
     public void onBindViewHolder(@NonNull TaskViewHolder holder, int position) {
-        holder.bind(taskList.get(position), listener);
+        holder.bind(items.get(position), listener);
     }
 
     @Override
     public int getItemCount() {
-        return taskList.size();
+        return items.size();
     }
 
     /**
-     * Replace the task list and refresh the RecyclerView
-     * @param newTaskList Updated list of tasks
+     * Replace the list and refresh the RecyclerView
+     * @param newItems Updated tasks with their overdue flags
      */
-    public void updateEvents(List<MaintenanceTask> newTaskList) {
-        this.taskList = newTaskList;
+    public void updateItems(List<TaskListItem> newItems) {
+        this.items = newItems;
         notifyDataSetChanged();
     }
 
@@ -74,6 +79,7 @@ public class EventAdapter extends RecyclerView.Adapter<EventAdapter.TaskViewHold
         private final TextView textViewDueDateTime;
         private final Button buttonEdit;
         private final Button buttonDelete;
+        private final int normalDueColor; // The theme's text color, saved so it can be restored
 
         public TaskViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -83,18 +89,35 @@ public class EventAdapter extends RecyclerView.Adapter<EventAdapter.TaskViewHold
             textViewDueDateTime = itemView.findViewById(R.id.textViewDueDateTime);
             buttonEdit = itemView.findViewById(R.id.buttonEdit);
             buttonDelete = itemView.findViewById(R.id.buttonDelete);
+            normalDueColor = textViewDueDateTime.getCurrentTextColor();
         }
 
         /**
          * Show a task's details and set up its click listeners
-         * @param task Task to display
+         * @param item Task to display, with its overdue flag
          * @param listener Click listener for interactions
          */
-        public void bind(MaintenanceTask task, OnEventClickListener listener) {
+        public void bind(TaskListItem item, OnEventClickListener listener) {
+            MaintenanceTask task = item.getTask();
+
             textViewTaskName.setText(task.getTaskName());
             textViewTailNumber.setText("Tail: " + task.getTailNumber());
             textViewTypeStatus.setText(task.getTaskType() + " | " + task.getStatus());
-            textViewDueDateTime.setText("Due " + task.getDueDate() + " at " + task.getDueTime());
+
+            String due = "Due " + task.getDueDate() + " at " + task.getDueTime();
+
+            // Overdue tasks stand out in red. Cards are reused while scrolling,
+            // so the color is always set, never just changed for overdue ones.
+            if (item.isOverdue()) {
+                textViewDueDateTime.setText("OVERDUE: " + due);
+                textViewDueDateTime.setTextColor(OVERDUE_COLOR);
+            } else {
+                textViewDueDateTime.setText(due);
+                textViewDueDateTime.setTextColor(normalDueColor);
+            }
+
+            // Completed tasks are faded so open work stands out
+            itemView.setAlpha(task.isComplete() ? COMPLETED_ALPHA : NORMAL_ALPHA);
 
             // Card, edit, and delete clicks
             itemView.setOnClickListener(v -> {
