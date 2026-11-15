@@ -13,6 +13,8 @@ materialVersion = "1.9.0"
 recyclerview = "1.4.0"
 swiperefreshlayout = "1.2.0"
 swiperefreshlayoutVersion = "1.1.0"
+lifecycle = "2.8.7"
+coreTesting = "2.2.0"
 
 [libraries]
 appcompat-v161 = { module = "androidx.appcompat:appcompat", version.ref = "appcompatVersion" }
@@ -28,6 +30,9 @@ material-v190 = { module = "com.google.android.material:material", version.ref =
 recyclerview = { module = "androidx.recyclerview:recyclerview", version.ref = "recyclerview" }
 swiperefreshlayout = { group = "androidx.swiperefreshlayout", name = "swiperefreshlayout", version.ref = "swiperefreshlayout" }
 swiperefreshlayout-v110 = { module = "androidx.swiperefreshlayout:swiperefreshlayout", version.ref = "swiperefreshlayoutVersion" }
+lifecycle-viewmodel = { group = "androidx.lifecycle", name = "lifecycle-viewmodel", version.ref = "lifecycle" }
+lifecycle-livedata = { group = "androidx.lifecycle", name = "lifecycle-livedata", version.ref = "lifecycle" }
+arch-core-testing = { group = "androidx.arch.core", name = "core-testing", version.ref = "coreTesting" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

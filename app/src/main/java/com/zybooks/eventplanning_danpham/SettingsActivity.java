@@ -7,20 +7,18 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.util.Log;
-import android.view.View;
 import android.widget.Button;
-import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
+
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
-
 
 /**
  * SettingsActivity manages app settings including notifications, SMS permissions,
@@ -43,17 +41,12 @@ public class SettingsActivity extends AppCompatActivity {
 
     // SharedPreferences
     private SharedPreferences sharedPreferences;
-    private static final String PREFS_NAME = "EventTrackerPrefs";
-    private static final String KEY_USER_ID = "user_id";
-    private static final String KEY_USERNAME = "username";
-    private static final String KEY_NOTIFICATIONS_ENABLED = "notifications_enabled";
-    private static final String KEY_THEME = "theme_preference";
+
+    // Tracks the logged-in user
+    private SessionManager sessionManager;
 
     // SMS permission request code
     private static final int SMS_PERMISSION_REQUEST_CODE = 100;
-
-    // Database helper
-    private DatabaseHelper databaseHelper;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -63,10 +56,10 @@ public class SettingsActivity extends AppCompatActivity {
         Log.i(TAG, "onCreate - SettingsActivity started");
 
         // Initialize SharedPreferences
-        sharedPreferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        sharedPreferences = getSharedPreferences(AppConstants.PREFS_NAME, MODE_PRIVATE);
 
-        // Initialize database helper
-        databaseHelper = new DatabaseHelper(this);
+        // Initialize session manager
+        sessionManager = new SessionManager(this);
 
         // Initialize UI components
         initializeViews();
@@ -96,18 +89,18 @@ public class SettingsActivity extends AppCompatActivity {
      */
     private void loadSettings() {
         // Load username
-        String username = sharedPreferences.getString(KEY_USERNAME, "User");
+        String username = sessionManager.getUsername();
         textViewAccountName.setText(username);
 
         // Load notification preference
-        boolean notificationsEnabled = sharedPreferences.getBoolean(KEY_NOTIFICATIONS_ENABLED, true);
+        boolean notificationsEnabled = sharedPreferences.getBoolean(AppConstants.KEY_NOTIFICATIONS_ENABLED, true);
         switchNotifications.setChecked(notificationsEnabled);
 
         // Check SMS permission status
         updateSmsPermissionStatus();
 
         // Load theme preference
-        String theme = sharedPreferences.getString(KEY_THEME, "system");
+        String theme = sharedPreferences.getString(AppConstants.KEY_THEME, "system");
         loadThemeSelection(theme);
     }
 
@@ -159,7 +152,7 @@ public class SettingsActivity extends AppCompatActivity {
             Log.i(TAG, "Notifications switch toggled to: " + isChecked);
 
             SharedPreferences.Editor editor = sharedPreferences.edit();
-            editor.putBoolean(KEY_NOTIFICATIONS_ENABLED, isChecked);
+            editor.putBoolean(AppConstants.KEY_NOTIFICATIONS_ENABLED, isChecked);
             editor.apply();
 
             String message = isChecked ? "Notifications enabled" : "Notifications disabled";
@@ -212,7 +205,7 @@ public class SettingsActivity extends AppCompatActivity {
 
             // Save theme preference
             SharedPreferences.Editor editor = sharedPreferences.edit();
-            editor.putString(KEY_THEME, theme);
+            editor.putString(AppConstants.KEY_THEME, theme);
             editor.apply();
 
             // Apply theme immediately
@@ -239,7 +232,7 @@ public class SettingsActivity extends AppCompatActivity {
                 // Show explanation dialog
                 new AlertDialog.Builder(this)
                         .setTitle("SMS Permission Required")
-                        .setMessage("This app needs SMS permission to send you event reminders. " +
+                        .setMessage("This app needs SMS permission to send you task reminders. " +
                                 "Grant permission to enable this feature.")
                         .setPositiveButton("Grant Permission", (dialog, which) -> {
                             ActivityCompat.requestPermissions(this,
@@ -275,13 +268,13 @@ public class SettingsActivity extends AppCompatActivity {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 Log.i(TAG, "SMS permission granted");
                 Toast.makeText(this, "SMS permission granted. " +
-                        "You will now receive event reminders.", Toast.LENGTH_LONG).show();
+                        "You will now receive task reminders.", Toast.LENGTH_LONG).show();
                 updateSmsPermissionStatus();
             } else {
                 Log.w(TAG, "SMS permission denied");
                 switchSmsPermission.setChecked(false);
                 Toast.makeText(this, "SMS permission denied. " +
-                        "Event reminders will not be sent.", Toast.LENGTH_LONG).show();
+                        "Task reminders will not be sent by SMS.", Toast.LENGTH_LONG).show();
                 updateSmsPermissionStatus();
             }
         }
@@ -291,8 +284,7 @@ public class SettingsActivity extends AppCompatActivity {
      * Show dialog for changing password
      */
     private void showChangePasswordDialog() {
-        // For simplicity, showing a basic implementation
-        // In a real app, you'd want current password verification
+        // Password changes will be added with password hashing in the Databases enhancement
         Toast.makeText(this, "Change password feature - to be implemented with " +
                 "current password verification", Toast.LENGTH_SHORT).show();
     }
@@ -305,11 +297,8 @@ public class SettingsActivity extends AppCompatActivity {
                 .setTitle("Logout")
                 .setMessage("Are you sure you want to logout?")
                 .setPositiveButton("Logout", (dialog, which) -> {
-                    // Clear SharedPreferences
-                    SharedPreferences.Editor editor = sharedPreferences.edit();
-                    editor.remove(KEY_USER_ID);
-                    editor.remove(KEY_USERNAME);
-                    editor.apply();
+                    // Clear the logged-in user's session
+                    sessionManager.clearSession();
 
                     // Navigate to login
                     Intent intent = new Intent(SettingsActivity.this, LoginActivity.class);

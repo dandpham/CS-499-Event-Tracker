@@ -1,31 +1,31 @@
 package com.zybooks.eventplanning_danpham;
 
-import android.os.Bundle;
-
-import androidx.appcompat.app.AppCompatActivity;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
+
 import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
+import androidx.appcompat.widget.SearchView;
 import androidx.appcompat.widget.Toolbar;
+import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
+
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
+
 import java.util.ArrayList;
-import java.util.List;
-import android.app.AlarmManager;
-import android.app.PendingIntent;
-import android.content.Context;
 
 /**
- * MainActivity displays the main dashboard with a grid of upcoming events.
- * Allows users to view, add, edit, and delete events.
+ * MainActivity displays the dashboard of the user's maintenance tasks.
+ * It only shows what TaskListViewModel provides and passes user actions to it.
  */
 public class MainActivity extends AppCompatActivity implements EventAdapter.OnEventClickListener {
 
@@ -35,22 +35,11 @@ public class MainActivity extends AppCompatActivity implements EventAdapter.OnEv
     private SwipeRefreshLayout swipeRefreshLayout;
     private FloatingActionButton fabAddEvent;
     private Toolbar toolbar;
+    private EventAdapter taskAdapter;
 
-    // Data components
-    private DatabaseHelper databaseHelper;
-    private EventAdapter eventAdapter;
-    private List<Event> eventList;
-    private int currentUserId;
-
-    // SharedPreferences
-    private SharedPreferences sharedPreferences;
-    private static final String PREFS_NAME = "EventTrackerPrefs";
-    private static final String KEY_USER_ID = "user_id";
-
-    // Request codes for activities
-    private static final int REQUEST_ADD_EVENT = 1;
-    private static final int REQUEST_EDIT_EVENT = 2;
-    private static final int REQUEST_VIEW_EVENT = 3;
+    // Logic and data
+    private TaskListViewModel viewModel;
+    private int currentUserId = AppConstants.NO_ID;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -61,41 +50,43 @@ public class MainActivity extends AppCompatActivity implements EventAdapter.OnEv
 
         setContentView(R.layout.activity_main_dashboard);
 
-        // Initialize SharedPreferences and get current user ID
-        sharedPreferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-        currentUserId = sharedPreferences.getInt(KEY_USER_ID, -1);
-
-        // Check if user is logged in
-        if (currentUserId == -1) {
+        // Send the user to login if nobody is logged in
+        SessionManager sessionManager = new SessionManager(this);
+        if (!sessionManager.isLoggedIn()) {
             navigateToLogin();
             return;
         }
+        currentUserId = sessionManager.getUserId();
 
-        // Initialize database helper
-        databaseHelper = new DatabaseHelper(this);
+        // Get the ViewModel. Android keeps the same one when the screen rotates.
+        viewModel = new ViewModelProvider(this, new ViewModelFactory(this))
+                .get(TaskListViewModel.class);
 
-        // Initialize UI components
         initializeViews();
-
-        // Set up toolbar
-        setupToolbar();
-
-        // Set up RecyclerView
+        setSupportActionBar(toolbar);
         setupRecyclerView();
-
-        // Load events from database
-        loadEvents();
-
-        // Set up listeners
         setupListeners();
+        observeViewModel();
+    }
+
+    /**
+     * Reload tasks whenever this screen appears, including after
+     * returning from the add, edit, or detail screens
+     */
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (viewModel != null) {
+            viewModel.loadTasks(currentUserId);
+        }
     }
 
     /**
      * Apply saved theme preference
      */
     private void applyTheme() {
-        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-        String theme = prefs.getString("theme_preference", "system");
+        SharedPreferences prefs = getSharedPreferences(AppConstants.PREFS_NAME, MODE_PRIVATE);
+        String theme = prefs.getString(AppConstants.KEY_THEME, "system");
 
         int nightMode;
         switch (theme) {
@@ -125,142 +116,125 @@ public class MainActivity extends AppCompatActivity implements EventAdapter.OnEv
     }
 
     /**
-     * Set up the toolbar with menu
-     */
-    private void setupToolbar() {
-        setSupportActionBar(toolbar);
-    }
-
-    /**
      * Set up RecyclerView with adapter and layout manager
      */
     private void setupRecyclerView() {
-        eventList = new ArrayList<>();
-        eventAdapter = new EventAdapter(eventList, this);
-        recyclerViewEvents.setAdapter(eventAdapter);
+        taskAdapter = new EventAdapter(new ArrayList<>(), this);
+        recyclerViewEvents.setAdapter(taskAdapter);
         recyclerViewEvents.setLayoutManager(new LinearLayoutManager(this));
     }
 
     /**
-     * Set up click listeners for FAB and swipe refresh
+     * Set up click listeners for the add button and swipe refresh
      */
     private void setupListeners() {
-        // FAB click listener - navigate to add event screen
-        fabAddEvent.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Intent intent = new Intent(MainActivity.this, AddEditEventActivity.class);
-                intent.putExtra("USER_ID", currentUserId);
-                startActivityForResult(intent, REQUEST_ADD_EVENT);
+        fabAddEvent.setOnClickListener(v ->
+                startActivity(new Intent(MainActivity.this, AddEditEventActivity.class)));
+
+        swipeRefreshLayout.setOnRefreshListener(() -> viewModel.loadTasks(currentUserId));
+    }
+
+    /**
+     * Update the screen whenever the ViewModel's data changes
+     */
+    private void observeViewModel() {
+        viewModel.getTasks().observe(this, items -> {
+            taskAdapter.updateItems(items);
+            swipeRefreshLayout.setRefreshing(false);
+
+            // Show or hide the empty state message
+            boolean empty = items.isEmpty();
+            textViewEmptyState.setText(viewModel.isSearching()
+                    ? "No tasks match your search."
+                    : "No tasks yet.\nTap the + button to add your first task!");
+            textViewEmptyState.setVisibility(empty ? View.VISIBLE : View.GONE);
+            recyclerViewEvents.setVisibility(empty ? View.GONE : View.VISIBLE);
+        });
+
+        viewModel.getMessage().observe(this, message -> {
+            if (message != null) {
+                Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
+                viewModel.clearMessages();
             }
         });
 
-        // Swipe refresh listener - reload events
-        swipeRefreshLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
-            @Override
-            public void onRefresh() {
-                loadEvents();
+        viewModel.getErrorMessage().observe(this, error -> {
+            if (error != null) {
                 swipeRefreshLayout.setRefreshing(false);
+                Toast.makeText(this, error, Toast.LENGTH_SHORT).show();
+                viewModel.clearMessages();
             }
         });
     }
 
     /**
-     * Load all events for current user from database
-     */
-    private void loadEvents() {
-        eventList = databaseHelper.getAllEvents(currentUserId);
-        eventAdapter.updateEvents(eventList);
-
-        // Show or hide empty state message
-        if (eventList.isEmpty()) {
-            textViewEmptyState.setVisibility(View.VISIBLE);
-            recyclerViewEvents.setVisibility(View.GONE);
-        } else {
-            textViewEmptyState.setVisibility(View.GONE);
-            recyclerViewEvents.setVisibility(View.VISIBLE);
-        }
-    }
-
-    /**
-     * Handle event card click - navigate to event detail screen
+     * Tapping a task card opens the detail screen
      */
     @Override
-    public void onEventClick(Event event) {
+    public void onEventClick(MaintenanceTask task) {
         Intent intent = new Intent(MainActivity.this, EventDetailActivity.class);
-        intent.putExtra("EVENT", event);
-        startActivityForResult(intent, REQUEST_VIEW_EVENT);
+        intent.putExtra(AppConstants.EXTRA_EVENT_ID, task.getTaskId());
+        startActivity(intent);
     }
 
     /**
-     * Handle edit button click - navigate to edit event screen
+     * Tapping Edit opens the edit screen
      */
     @Override
-    public void onEditClick(Event event) {
+    public void onEditClick(MaintenanceTask task) {
         Intent intent = new Intent(MainActivity.this, AddEditEventActivity.class);
-        intent.putExtra("EVENT_ID", event.getEventId());
-        intent.putExtra("USER_ID", currentUserId);
-        startActivityForResult(intent, REQUEST_EDIT_EVENT);
+        intent.putExtra(AppConstants.EXTRA_EVENT_ID, task.getTaskId());
+        startActivity(intent);
     }
 
     /**
-     * Handle delete button click - show confirmation dialog
+     * Tapping Delete asks for confirmation, then lets the ViewModel delete it
      */
     @Override
-    public void onDeleteClick(Event event) {
-        // Show confirmation dialog before deleting
+    public void onDeleteClick(MaintenanceTask task) {
         new AlertDialog.Builder(this)
-                .setTitle("Delete Event")
-                .setMessage("Are you sure you want to delete this event?")
-                .setPositiveButton("Delete", (dialog, which) -> {
-                    deleteEvent(event.getEventId());
-                })
+                .setTitle("Delete Task")
+                .setMessage("Are you sure you want to delete this task?")
+                .setPositiveButton("Delete", (dialog, which) -> viewModel.deleteTask(task.getTaskId()))
                 .setNegativeButton("Cancel", null)
                 .show();
     }
 
     /**
-     * Delete an event from the database
-     * @param eventId ID of event to delete
-     */
-    private void deleteEvent(int eventId) {
-        // Cancel scheduled notification
-        cancelEventNotification(eventId);
-
-        int rowsDeleted = databaseHelper.deleteEvent(eventId);
-
-        if (rowsDeleted > 0) {
-            Toast.makeText(this, "Event deleted", Toast.LENGTH_SHORT).show();
-            loadEvents(); // Refresh the list
-        } else {
-            Toast.makeText(this, "Failed to delete event", Toast.LENGTH_SHORT).show();
-        }
-    }
-
-    /**
-     * Cancel a scheduled notification
-     */
-    private void cancelEventNotification(int eventId) {
-        Intent intent = new Intent(this, EventNotificationReceiver.class);
-        PendingIntent pendingIntent = PendingIntent.getBroadcast(
-                this,
-                eventId,
-                intent,
-                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
-        );
-
-        AlarmManager alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
-        if (alarmManager != null) {
-            alarmManager.cancel(pendingIntent);
-        }
-    }
-
-    /**
-     * Create options menu in toolbar
+     * Create the toolbar menu and set up the search box
      */
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.main_menu, menu);
+        if (viewModel == null) {
+            return true;
+        }
+
+        MenuItem searchItem = menu.findItem(R.id.action_search);
+        SearchView searchView = (SearchView) searchItem.getActionView();
+        searchView.setQueryHint("Search tail number, task, or notes");
+
+        // Keep an active search after the screen rotates
+        String currentQuery = viewModel.getSearchQuery();
+        if (!currentQuery.isEmpty()) {
+            searchItem.expandActionView();
+            searchView.setQuery(currentQuery, false);
+        }
+
+        // Filter the list as the user types
+        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+            @Override
+            public boolean onQueryTextSubmit(String query) {
+                searchView.clearFocus(); // Hide the keyboard
+                return true;
+            }
+
+            @Override
+            public boolean onQueryTextChange(String newText) {
+                viewModel.setSearchQuery(newText);
+                return true;
+            }
+        });
         return true;
     }
 
@@ -269,46 +243,18 @@ public class MainActivity extends AppCompatActivity implements EventAdapter.OnEv
      */
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        int id = item.getItemId();
-
-        if (id == R.id.action_settings) {
-            // Navigate to settings
-            Intent intent = new Intent(MainActivity.this, SettingsActivity.class);
-            startActivity(intent);
+        if (item.getItemId() == R.id.action_settings) {
+            startActivity(new Intent(MainActivity.this, SettingsActivity.class));
             return true;
         }
-
         return super.onOptionsItemSelected(item);
     }
 
     /**
-     * Handle results from child activities
-     */
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-
-        if (resultCode == RESULT_OK) {
-            // Reload events after add, edit, or delete
-            loadEvents();
-        }
-    }
-
-    /**
-     * Reload events when returning to this activity
-     */
-    @Override
-    protected void onResume() {
-        super.onResume();
-        loadEvents();
-    }
-
-    /**
-     * Navigate to login activity
+     * Navigate to the login screen
      */
     private void navigateToLogin() {
-        Intent intent = new Intent(MainActivity.this, LoginActivity.class);
-        startActivity(intent);
+        startActivity(new Intent(MainActivity.this, LoginActivity.class));
         finish();
     }
 }
