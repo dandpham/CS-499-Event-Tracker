@@ -79,7 +79,7 @@ public class TaskListViewModel extends ViewModel {
      */
     public void loadTasks(int userId) {
         this.userId = userId;
-        repository.getTasks(userId, new TaskRepository.Callback<List<MaintenanceTask>>() {
+        repository.getTasks(userId, new RepositoryCallback<List<MaintenanceTask>>() {
             @Override
             public void onSuccess(List<MaintenanceTask> result) {
                 allTasks = result;
@@ -97,7 +97,7 @@ public class TaskListViewModel extends ViewModel {
      * Delete a task, then reload the list
      */
     public void deleteTask(int taskId) {
-        repository.deleteTask(taskId, new TaskRepository.Callback<Integer>() {
+        repository.deleteTask(taskId, userId, new RepositoryCallback<Integer>() {
             @Override
             public void onSuccess(Integer result) {
                 message.setValue("Task deleted");
@@ -126,8 +126,8 @@ public class TaskListViewModel extends ViewModel {
 
     /**
      * Sort tasks by due date and time, and flag the overdue ones.
-     * Sorting here uses real dates, so tasks appear in the right order even
-     * though the database still stores dates as text.
+     * The database already returns tasks sorted by their due_at timestamp.
+     * Sorting here too keeps the order right for any repository, including the test fake.
      */
     List<TaskListItem> buildListItems(List<MaintenanceTask> taskList) {
         LocalDateTime now = clock.get();

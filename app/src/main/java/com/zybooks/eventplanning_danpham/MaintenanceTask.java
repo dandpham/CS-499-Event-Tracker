@@ -34,6 +34,13 @@ public class MaintenanceTask {
     private String taskType = TYPE_INSPECTION;
     private String status = STATUS_OPEN;
 
+    // Added in the Databases enhancement
+    private String aircraftModel;      // Optional, such as "Cessna 172"
+    private boolean needsReview;       // Set for tasks moved from old data that need checking
+    private Integer repeatDays;        // Days between recurring tasks, or null if it doesn't repeat
+    private String signedOffBy;        // Username of who signed it off, or null
+    private Long signedOffAt;          // When it was signed off, or null
+
     // Constructor for creating new tasks
     public MaintenanceTask(int userId, String taskName, String dueDate, String dueTime,
                            String tailNumber, String notes) {
@@ -50,6 +57,13 @@ public class MaintenanceTask {
                            String dueTime, String tailNumber, String notes) {
         this(userId, taskName, dueDate, dueTime, tailNumber, notes);
         this.taskId = taskId;
+    }
+
+    /**
+     * @return true if signing this task off creates the next one
+     */
+    public boolean isRecurring() {
+        return repeatDays != null && repeatDays > 0;
     }
 
     /**
@@ -142,5 +156,45 @@ public class MaintenanceTask {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public String getAircraftModel() {
+        return aircraftModel;
+    }
+
+    public void setAircraftModel(String aircraftModel) {
+        this.aircraftModel = aircraftModel;
+    }
+
+    public boolean isNeedsReview() {
+        return needsReview;
+    }
+
+    public void setNeedsReview(boolean needsReview) {
+        this.needsReview = needsReview;
+    }
+
+    public Integer getRepeatDays() {
+        return repeatDays;
+    }
+
+    public void setRepeatDays(Integer repeatDays) {
+        this.repeatDays = repeatDays;
+    }
+
+    public String getSignedOffBy() {
+        return signedOffBy;
+    }
+
+    public void setSignedOffBy(String signedOffBy) {
+        this.signedOffBy = signedOffBy;
+    }
+
+    public Long getSignedOffAt() {
+        return signedOffAt;
+    }
+
+    public void setSignedOffAt(Long signedOffAt) {
+        this.signedOffAt = signedOffAt;
     }
 }

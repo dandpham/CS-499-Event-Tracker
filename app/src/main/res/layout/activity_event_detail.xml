@@ -19,7 +19,21 @@
             tools:text="100-hour inspection"
             android:textSize="28sp"
             android:textStyle="bold"
-            android:layout_marginBottom="24dp" />
+            android:layout_marginBottom="8dp" />
+
+        <!-- Needs Review flag (only visible for flagged tasks) -->
+        <TextView
+            android:id="@+id/textViewDetailNeedsReview"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Needs review: moved from old data with missing information. Edit and save to review it."
+            android:textColor="#D32F2F"
+            android:textSize="14sp"
+            android:visibility="gone" />
+
+        <Space
+            android:layout_width="match_parent"
+            android:layout_height="16dp" />
 
         <!-- Tail Number -->
         <TextView
@@ -106,6 +120,40 @@
             android:textSize="18sp"
             android:layout_marginBottom="16dp" />
 
+        <!-- Repeat -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Repeats"
+            android:textSize="14sp"
+            android:textColor="#666666"
+            android:layout_marginBottom="4dp" />
+
+        <TextView
+            android:id="@+id/textViewDetailRepeat"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            tools:text="Every 30 days after sign-off"
+            android:textSize="18sp"
+            android:layout_marginBottom="16dp" />
+
+        <!-- Sign-off -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Sign-off"
+            android:textSize="14sp"
+            android:textColor="#666666"
+            android:layout_marginBottom="4dp" />
+
+        <TextView
+            android:id="@+id/textViewDetailSignOff"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            tools:text="Signed off by dan on 11/27/2026 09:40 AM"
+            android:textSize="18sp"
+            android:layout_marginBottom="16dp" />
+
         <!-- Notes -->
         <TextView
             android:layout_width="wrap_content"
@@ -121,6 +169,24 @@
             android:layout_height="wrap_content"
             tools:text="Check oil filter and chip detector"
             android:textSize="16sp"
+            android:layout_marginBottom="16dp" />
+
+        <!-- History from the audit log -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="History"
+            android:textSize="14sp"
+            android:textColor="#666666"
+            android:layout_marginBottom="4dp" />
+
+        <TextView
+            android:id="@+id/textViewDetailHistory"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            tools:text="11/27/2026 09:40 AM  CREATED by dan"
+            android:textSize="14sp"
+            android:textIsSelectable="true"
             android:layout_marginBottom="32dp" />
 
         <!-- Divider -->
@@ -130,7 +196,16 @@
             android:background="#CCCCCC"
             android:layout_marginBottom="24dp" />
 
-        <!-- Edit Button -->
+        <!-- Sign Off Button (only visible for open tasks) -->
+        <Button
+            android:id="@+id/buttonSignOff"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Sign Off Task"
+            android:minHeight="48dp"
+            android:layout_marginBottom="12dp" />
+
+        <!-- Edit Button (only visible for open tasks) -->
         <Button
             android:id="@+id/buttonEdit"
             android:layout_width="match_parent"

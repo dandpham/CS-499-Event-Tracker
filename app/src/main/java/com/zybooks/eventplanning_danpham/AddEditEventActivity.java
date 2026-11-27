@@ -9,7 +9,6 @@ import android.provider.Settings;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
-import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.Spinner;
 import android.widget.TextView;
@@ -34,13 +33,14 @@ public class AddEditEventActivity extends AppCompatActivity {
     private TextView textViewScreenTitle;
     private EditText editTextTaskName;
     private EditText editTextTailNumber;
+    private EditText editTextAircraftModel;
     private Spinner spinnerTaskType;
     private Button buttonSelectDate;
     private TextView textViewSelectedDate;
     private Button buttonSelectTime;
     private TextView textViewSelectedTime;
+    private EditText editTextRepeatDays;
     private EditText editTextNotes;
-    private CheckBox checkBoxComplete;
     private Button buttonSave;
     private Button buttonCancel;
     private Button buttonDelete;
@@ -73,16 +73,15 @@ public class AddEditEventActivity extends AppCompatActivity {
         if (taskId != AppConstants.NO_ID) {
             textViewScreenTitle.setText("Edit Task");
             buttonDelete.setVisibility(View.VISIBLE);
-            checkBoxComplete.setVisibility(View.VISIBLE);
 
             // Load only the first time. After a rotation, the ViewModel still has the task.
             if (savedInstanceState == null) {
-                viewModel.loadTask(taskId);
+                viewModel.loadTask(taskId, userId);
             }
         } else {
+            // New tasks always start as Open. Tasks are completed by signing off.
             textViewScreenTitle.setText("Add Task");
             buttonDelete.setVisibility(View.GONE);
-            checkBoxComplete.setVisibility(View.GONE); // New tasks always start as Open
         }
     }
 
@@ -93,13 +92,14 @@ public class AddEditEventActivity extends AppCompatActivity {
         textViewScreenTitle = findViewById(R.id.textViewScreenTitle);
         editTextTaskName = findViewById(R.id.editTextTaskName);
         editTextTailNumber = findViewById(R.id.editTextTailNumber);
+        editTextAircraftModel = findViewById(R.id.editTextAircraftModel);
         spinnerTaskType = findViewById(R.id.spinnerTaskType);
         buttonSelectDate = findViewById(R.id.buttonSelectDate);
         textViewSelectedDate = findViewById(R.id.textViewSelectedDate);
         buttonSelectTime = findViewById(R.id.buttonSelectTime);
         textViewSelectedTime = findViewById(R.id.textViewSelectedTime);
+        editTextRepeatDays = findViewById(R.id.editTextRepeatDays);
         editTextNotes = findViewById(R.id.editTextNotes);
-        checkBoxComplete = findViewById(R.id.checkBoxComplete);
         buttonSave = findViewById(R.id.buttonSave);
         buttonCancel = findViewById(R.id.buttonCancel);
         buttonDelete = findViewById(R.id.buttonDelete);
@@ -160,17 +160,23 @@ public class AddEditEventActivity extends AppCompatActivity {
         }
         editTextTaskName.setText(task.getTaskName());
         editTextTailNumber.setText(task.getTailNumber());
+        editTextAircraftModel.setText(task.getAircraftModel());
         selectedDate = task.getDueDate();
         textViewSelectedDate.setText(selectedDate);
         selectedTime = task.getDueTime();
         textViewSelectedTime.setText(selectedTime);
         editTextNotes.setText(task.getNotes());
+        editTextRepeatDays.setText(task.isRecurring() ? String.valueOf(task.getRepeatDays()) : "");
 
         // Select the saved task type, or the first type if it isn't found
         int typeIndex = Arrays.asList(MaintenanceTask.TASK_TYPES).indexOf(task.getTaskType());
         spinnerTaskType.setSelection(Math.max(typeIndex, 0));
 
-        checkBoxComplete.setChecked(task.isComplete());
+        // A signed-off task is a finished record, so it can't be changed
+        if (task.isComplete()) {
+            Toast.makeText(this, "Signed-off tasks can't be edited", Toast.LENGTH_SHORT).show();
+            finish();
+        }
     }
 
     /**
@@ -245,11 +251,12 @@ public class AddEditEventActivity extends AppCompatActivity {
                 userId,
                 editTextTaskName.getText().toString(),
                 editTextTailNumber.getText().toString().trim().toUpperCase(Locale.US),
+                editTextAircraftModel.getText().toString(),
                 (String) spinnerTaskType.getSelectedItem(),
                 selectedDate,
                 selectedTime,
                 editTextNotes.getText().toString().trim(),
-                checkBoxComplete.isChecked());
+                editTextRepeatDays.getText().toString());
     }
 
     /**
@@ -259,7 +266,7 @@ public class AddEditEventActivity extends AppCompatActivity {
         new AlertDialog.Builder(this)
                 .setTitle("Delete Task")
                 .setMessage("Are you sure you want to delete this task?")
-                .setPositiveButton("Delete", (dialog, which) -> viewModel.deleteTask(taskId))
+                .setPositiveButton("Delete", (dialog, which) -> viewModel.deleteTask(taskId, userId))
                 .setNegativeButton("Cancel", null)
                 .show();
     }

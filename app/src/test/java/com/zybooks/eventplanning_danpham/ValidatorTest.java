@@ -150,4 +150,81 @@ public class ValidatorTest {
         // Boundary test: a task due at the current minute is not in the past
         assertNull(Validator.checkTask("Engine inspection", "N12345", "11/12/2026", "09:00 AM", NOW));
     }
+
+    // ===== Repeat interval tests =====
+
+    private static final String REPEAT_RANGE_ERROR = "Repeat interval must be between 1 and 3650 days";
+
+    @Test
+    public void checkRepeatDays_blank_returnsNull() {
+        // Blank means the task doesn't repeat
+        assertNull(Validator.checkRepeatDays(""));
+        assertNull(Validator.checkRepeatDays("   "));
+        assertNull(Validator.checkRepeatDays(null));
+    }
+
+    @Test
+    public void checkRepeatDays_validNumber_returnsNull() {
+        assertNull(Validator.checkRepeatDays("30"));
+    }
+
+    @Test
+    public void checkRepeatDays_boundaries() {
+        assertNull(Validator.checkRepeatDays("1"));
+        assertNull(Validator.checkRepeatDays("3650"));
+        assertEquals(REPEAT_RANGE_ERROR, Validator.checkRepeatDays("0"));
+        assertEquals(REPEAT_RANGE_ERROR, Validator.checkRepeatDays("3651"));
+    }
+
+    @Test
+    public void checkRepeatDays_notANumber_returnsError() {
+        assertEquals("Repeat interval must be a whole number of days", Validator.checkRepeatDays("30.5"));
+        assertEquals("Repeat interval must be a whole number of days", Validator.checkRepeatDays("monthly"));
+    }
+
+    // ===== Aircraft model tests =====
+
+    @Test
+    public void checkAircraftModel_blankOrShort_returnsNull() {
+        assertNull(Validator.checkAircraftModel(""));
+        assertNull(Validator.checkAircraftModel(null));
+        assertNull(Validator.checkAircraftModel("F/A-18C Hornet"));
+    }
+
+    @Test
+    public void checkAircraftModel_tooLong_returnsError() {
+        assertEquals("Aircraft model must be 30 characters or less",
+                Validator.checkAircraftModel("1234567890123456789012345678901"));
+    }
+
+    // ===== Password change tests =====
+
+    @Test
+    public void checkNewPassword_valid_returnsNull() {
+        assertNull(Validator.checkNewPassword("oldpass1", "newpass1", "newpass1"));
+    }
+
+    @Test
+    public void checkNewPassword_missingCurrent_returnsError() {
+        assertEquals("Please enter your current password",
+                Validator.checkNewPassword("", "newpass1", "newpass1"));
+    }
+
+    @Test
+    public void checkNewPassword_tooShort_returnsError() {
+        assertEquals("New password must be at least 6 characters",
+                Validator.checkNewPassword("oldpass1", "abc", "abc"));
+    }
+
+    @Test
+    public void checkNewPassword_confirmMismatch_returnsError() {
+        assertEquals("New passwords don't match",
+                Validator.checkNewPassword("oldpass1", "newpass1", "newpass2"));
+    }
+
+    @Test
+    public void checkNewPassword_sameAsCurrent_returnsError() {
+        assertEquals("New password must be different from the current one",
+                Validator.checkNewPassword("oldpass1", "oldpass1", "oldpass1"));
+    }
 }

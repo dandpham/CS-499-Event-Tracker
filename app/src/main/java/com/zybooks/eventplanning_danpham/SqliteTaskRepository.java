@@ -1,27 +1,16 @@
 package com.zybooks.eventplanning_danpham;
 
 import android.content.Context;
-import android.os.Handler;
-import android.os.Looper;
 
 import java.util.List;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 /**
- * SqliteTaskRepository is the only class that talks to DatabaseHelper.
+ * SqliteTaskRepository is the only class that talks to DatabaseHelper about tasks.
  * It runs all database work on a background thread so the screen never freezes,
  * keeps task reminders in sync with the database, and reports each result
  * back on the main thread.
  */
 public class SqliteTaskRepository implements TaskRepository {
-
-    // One shared background thread, so database operations run one at a time, in order
-    private static final ExecutorService EXECUTOR = Executors.newSingleThreadExecutor();
-
-    // Used to send results back to the main (screen) thread
-    private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
     private final DatabaseHelper databaseHelper;
     private final ReminderScheduler reminderScheduler;
@@ -29,34 +18,23 @@ public class SqliteTaskRepository implements TaskRepository {
     public SqliteTaskRepository(Context context) {
         // Use the application context so this doesn't hold onto a screen
         Context appContext = context.getApplicationContext();
-        databaseHelper = new DatabaseHelper(appContext);
+        databaseHelper = DatabaseHelper.getInstance(appContext);
         reminderScheduler = new ReminderScheduler(appContext);
     }
 
-    /**
-     * Run work on the background thread, then send the result or error
-     * back to the main thread through the callback
-     */
-    private <T> void runInBackground(Callable<T> work, Callback<T> callback) {
-        EXECUTOR.execute(() -> {
-            try {
-                T result = work.call();
-                mainHandler.post(() -> callback.onSuccess(result));
-            } catch (Exception e) {
-                mainHandler.post(() -> callback.onError(e));
-            }
-        });
+    private static long now() {
+        return System.currentTimeMillis();
     }
 
     @Override
-    public void getTasks(int userId, Callback<List<MaintenanceTask>> callback) {
-        runInBackground(() -> databaseHelper.getAllEvents(userId), callback);
+    public void getTasks(int userId, RepositoryCallback<List<MaintenanceTask>> callback) {
+        BackgroundRunner.run(() -> databaseHelper.getAllTasks(userId), callback);
     }
 
     @Override
-    public void getTask(int taskId, Callback<MaintenanceTask> callback) {
-        runInBackground(() -> {
-            MaintenanceTask task = databaseHelper.getEvent(taskId);
+    public void getTask(int taskId, int userId, RepositoryCallback<MaintenanceTask> callback) {
+        BackgroundRunner.run(() -> {
+            MaintenanceTask task = databaseHelper.getTask(taskId, userId);
             if (task == null) {
                 throw new IllegalStateException("Task not found");
             }
@@ -65,12 +43,9 @@ public class SqliteTaskRepository implements TaskRepository {
     }
 
     @Override
-    public void addTask(MaintenanceTask task, Callback<Long> callback) {
-        runInBackground(() -> {
-            long newId = databaseHelper.addEvent(task);
-            if (newId == AppConstants.NO_ID) {
-                throw new IllegalStateException("Could not save task");
-            }
+    public void addTask(MaintenanceTask task, RepositoryCallback<Long> callback) {
+        BackgroundRunner.run(() -> {
+            long newId = databaseHelper.addTask(task, now());
             task.setTaskId((int) newId);
             reminderScheduler.schedule(task);
             return newId;
@@ -78,13 +53,13 @@ public class SqliteTaskRepository implements TaskRepository {
     }
 
     @Override
-    public void updateTask(MaintenanceTask task, Callback<Integer> callback) {
-        runInBackground(() -> {
-            int rows = databaseHelper.updateEvent(task);
+    public void updateTask(MaintenanceTask task, RepositoryCallback<Integer> callback) {
+        BackgroundRunner.run(() -> {
+            int rows = databaseHelper.updateTask(task, now());
             if (rows == 0) {
                 throw new IllegalStateException("Task not found");
             }
-            // Replace the old reminder. schedule() skips completed tasks.
+            // Replace the old reminder
             reminderScheduler.cancel(task.getTaskId());
             reminderScheduler.schedule(task);
             return rows;
@@ -92,15 +67,46 @@ public class SqliteTaskRepository implements TaskRepository {
     }
 
     @Override
-    public void deleteTask(int taskId, Callback<Integer> callback) {
-        runInBackground(() -> {
-            // Always cancel the reminder, so a deleted task never sends one
-            reminderScheduler.cancel(taskId);
-            int rows = databaseHelper.deleteEvent(taskId);
+    public void deleteTask(int taskId, int userId, RepositoryCallback<Integer> callback) {
+        BackgroundRunner.run(() -> {
+            int rows = databaseHelper.deleteTask(taskId, userId, now());
             if (rows == 0) {
                 throw new IllegalStateException("Task not found");
             }
+            // Only cancel after the delete succeeds, so a blocked delete keeps its reminder
+            reminderScheduler.cancel(taskId);
             return rows;
         }, callback);
+    }
+
+    @Override
+    public void signOffTask(int taskId, int userId, RepositoryCallback<Long> callback) {
+        BackgroundRunner.run(() -> {
+            long nextTaskId = databaseHelper.signOffTask(taskId, userId, now());
+            // A signed-off task no longer needs a reminder. The next one does.
+            reminderScheduler.cancel(taskId);
+            if (nextTaskId != AppConstants.NO_ID) {
+                MaintenanceTask next = databaseHelper.getTask((int) nextTaskId, userId);
+                if (next != null) {
+                    reminderScheduler.schedule(next);
+                }
+            }
+            return nextTaskId;
+        }, callback);
+    }
+
+    @Override
+    public void getTaskHistory(int taskId, int userId, RepositoryCallback<List<AuditEntry>> callback) {
+        BackgroundRunner.run(() -> databaseHelper.getTaskHistory(taskId, userId), callback);
+    }
+
+    @Override
+    public void getReport(int userId, RepositoryCallback<MaintenanceReport> callback) {
+        BackgroundRunner.run(() -> databaseHelper.getReport(userId, now()), callback);
+    }
+
+    @Override
+    public void verifyAuditLog(RepositoryCallback<AuditChain.Result> callback) {
+        BackgroundRunner.run(() -> AuditChain.verify(databaseHelper.getAllAuditEntries()), callback);
     }
 }

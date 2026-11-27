@@ -104,7 +104,11 @@ public class EventAdapter extends RecyclerView.Adapter<EventAdapter.TaskViewHold
 
             textViewTaskName.setText(task.getTaskName());
             textViewTailNumber.setText("Tail: " + task.getTailNumber());
-            textViewTypeStatus.setText(task.getTaskType() + " | " + task.getStatus());
+            String typeStatus = task.getTaskType() + " | " + task.getStatus();
+            if (task.isNeedsReview()) {
+                typeStatus += " | Needs review";
+            }
+            textViewTypeStatus.setText(typeStatus);
 
             String due = "Due " + task.getDueDate() + " at " + task.getDueTime();
 
@@ -118,8 +122,10 @@ public class EventAdapter extends RecyclerView.Adapter<EventAdapter.TaskViewHold
                 textViewDueDateTime.setTextColor(normalDueColor);
             }
 
-            // Completed tasks are faded so open work stands out
+            // Completed tasks are faded so open work stands out.
+            // Signed-off tasks are finished records, so they have no Edit button.
             itemView.setAlpha(task.isComplete() ? COMPLETED_ALPHA : NORMAL_ALPHA);
+            buttonEdit.setVisibility(task.isComplete() ? View.GONE : View.VISIBLE);
 
             // Card, edit, and delete clicks
             itemView.setOnClickListener(v -> {

@@ -247,6 +247,10 @@ public class MainActivity extends AppCompatActivity implements EventAdapter.OnEv
             startActivity(new Intent(MainActivity.this, SettingsActivity.class));
             return true;
         }
+        if (item.getItemId() == R.id.action_reports) {
+            startActivity(new Intent(MainActivity.this, ReportsActivity.class));
+            return true;
+        }
         return super.onOptionsItemSelected(item);
     }
 

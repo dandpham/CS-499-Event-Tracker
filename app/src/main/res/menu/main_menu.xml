@@ -11,6 +11,11 @@
         app:actionViewClass="androidx.appcompat.widget.SearchView" />
 
     <item
+        android:id="@+id/action_reports"
+        android:title="Reports"
+        app:showAsAction="never" />
+
+    <item
         android:id="@+id/action_settings"
         android:title="Settings"
         android:icon="@android:drawable/ic_menu_preferences"
