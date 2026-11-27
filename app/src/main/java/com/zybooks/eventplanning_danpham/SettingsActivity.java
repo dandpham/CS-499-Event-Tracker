@@ -6,8 +6,11 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
+import android.text.InputType;
 import android.util.Log;
 import android.widget.Button;
+import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.widget.RadioGroup;
 import android.widget.Switch;
 import android.widget.TextView;
@@ -281,12 +284,69 @@ public class SettingsActivity extends AppCompatActivity {
     }
 
     /**
-     * Show dialog for changing password
+     * Show a dialog for changing the password. The current password must be
+     * correct, and the new one is saved as a new salted hash.
      */
     private void showChangePasswordDialog() {
-        // Password changes will be added with password hashing in the Databases enhancement
-        Toast.makeText(this, "Change password feature - to be implemented with " +
-                "current password verification", Toast.LENGTH_SHORT).show();
+        EditText currentPassword = passwordField("Current password");
+        EditText newPassword = passwordField("New password");
+        EditText confirmPassword = passwordField("Confirm new password");
+
+        LinearLayout layout = new LinearLayout(this);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        int padding = (int) (20 * getResources().getDisplayMetrics().density);
+        layout.setPadding(padding, padding / 2, padding, 0);
+        layout.addView(currentPassword);
+        layout.addView(newPassword);
+        layout.addView(confirmPassword);
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle("Change Password")
+                .setView(layout)
+                .setPositiveButton("Change", null) // Set below, so errors don't close the dialog
+                .setNegativeButton("Cancel", null)
+                .create();
+
+        dialog.setOnShowListener(d -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            String current = currentPassword.getText().toString().trim();
+            String updated = newPassword.getText().toString().trim();
+            String confirm = confirmPassword.getText().toString().trim();
+
+            String error = Validator.checkNewPassword(current, updated, confirm);
+            if (error != null) {
+                Toast.makeText(this, error, Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            // Hashing is slow on purpose, so it runs on the background thread
+            new SqliteUserRepository(this).changePassword(sessionManager.getUserId(), current, updated,
+                    new RepositoryCallback<Boolean>() {
+                        @Override
+                        public void onSuccess(Boolean result) {
+                            Toast.makeText(SettingsActivity.this, "Password changed",
+                                    Toast.LENGTH_SHORT).show();
+                            dialog.dismiss();
+                        }
+
+                        @Override
+                        public void onError(Exception e) {
+                            String message = (e instanceof IllegalArgumentException)
+                                    ? e.getMessage() : "Couldn't change password";
+                            Toast.makeText(SettingsActivity.this, message, Toast.LENGTH_SHORT).show();
+                        }
+                    });
+        }));
+        dialog.show();
+    }
+
+    /**
+     * Make a password box for the change password dialog
+     */
+    private EditText passwordField(String hint) {
+        EditText field = new EditText(this);
+        field.setHint(hint);
+        field.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
+        return field;
     }
 
     /**

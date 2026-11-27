@@ -11,8 +11,12 @@
     <!-- Alarm Permission for scheduling exact task reminders -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
 
+    <!-- Backups are turned off, and the rules files also exclude the database and
+         login session, so password hashes and maintenance records never leave the device -->
     <application
-        android:allowBackup="true"
+        android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
@@ -42,6 +46,11 @@
         <!-- EventDetailActivity (task details) -->
         <activity
             android:name=".EventDetailActivity"
+            android:exported="false" />
+
+        <!-- ReportsActivity (maintenance reports and audit log check) -->
+        <activity
+            android:name=".ReportsActivity"
             android:exported="false" />
 
         <!-- SettingsActivity -->

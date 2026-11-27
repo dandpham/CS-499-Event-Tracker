@@ -54,6 +54,24 @@
             android:minHeight="48dp"
             android:layout_marginBottom="16dp" />
 
+        <!-- Aircraft Model -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Aircraft Model (optional)"
+            android:textSize="16sp"
+            android:layout_marginBottom="8dp" />
+
+        <EditText
+            android:id="@+id/editTextAircraftModel"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="e.g., Cessna 172"
+            android:inputType="text"
+            android:maxLength="30"
+            android:minHeight="48dp"
+            android:layout_marginBottom="16dp" />
+
         <!-- Task Type -->
         <TextView
             android:layout_width="wrap_content"
@@ -137,6 +155,24 @@
                 android:textSize="16sp" />
         </LinearLayout>
 
+        <!-- Repeat Interval -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Repeat Every (days, optional)"
+            android:textSize="16sp"
+            android:layout_marginBottom="8dp" />
+
+        <EditText
+            android:id="@+id/editTextRepeatDays"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="e.g., 30 for a monthly inspection"
+            android:inputType="number"
+            android:maxLength="4"
+            android:minHeight="48dp"
+            android:layout_marginBottom="16dp" />
+
         <!-- Notes -->
         <TextView
             android:layout_width="wrap_content"
@@ -153,16 +189,6 @@
             android:inputType="textMultiLine"
             android:minLines="3"
             android:gravity="top"
-            android:layout_marginBottom="16dp" />
-
-        <!-- Status (only visible when editing) -->
-        <CheckBox
-            android:id="@+id/checkBoxComplete"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Mark as complete"
-            android:minHeight="48dp"
-            android:visibility="gone"
             android:layout_marginBottom="16dp" />
 
         <!-- Save Button -->

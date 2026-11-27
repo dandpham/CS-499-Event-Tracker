@@ -10,10 +10,12 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.lifecycle.ViewModelProvider;
 
 /**
- * LoginActivity handles user authentication and registration.
- * Provides login functionality and allows new users to create accounts.
+ * LoginActivity is the login and registration screen.
+ * It only displays the form and passes input to LoginViewModel,
+ * which checks passwords on a background thread.
  */
 public class LoginActivity extends AppCompatActivity {
 
@@ -25,19 +27,19 @@ public class LoginActivity extends AppCompatActivity {
     private TextView textViewError;
     private ProgressBar progressBar;
 
-    // Database helper
-    private DatabaseHelper databaseHelper;
+    // Logic and data
+    private LoginViewModel viewModel;
 
     // Tracks the logged-in user
     private SessionManager sessionManager;
+
+    // Remembers which button was pressed, for the success message
+    private boolean registering = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
-
-        // Initialize database helper
-        databaseHelper = new DatabaseHelper(this);
 
         // Initialize session manager
         sessionManager = new SessionManager(this);
@@ -48,11 +50,16 @@ public class LoginActivity extends AppCompatActivity {
             return;
         }
 
+        viewModel = new ViewModelProvider(this, new ViewModelFactory(this))
+                .get(LoginViewModel.class);
+
         // Initialize UI components
         initializeViews();
 
         // Set up button click listeners
         setupListeners();
+
+        observeViewModel();
     }
 
     /**
@@ -68,111 +75,52 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     /**
-     * Set up click listeners for login and register buttons
+     * Set up click listeners for login and register buttons.
+     * The ViewModel validates the input and checks the password on a background thread.
      */
     private void setupListeners() {
-        buttonLogin.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                handleLogin();
-            }
+        buttonLogin.setOnClickListener(v -> {
+            registering = false;
+            viewModel.login(getUsername(), getPassword());
         });
 
-        buttonRegister.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                handleRegistration();
-            }
+        buttonRegister.setOnClickListener(v -> {
+            registering = true;
+            viewModel.register(getUsername(), getPassword());
         });
     }
 
-    /**
-     * Handle login button click
-     * Validates user credentials against database
-     */
-    private void handleLogin() {
-        // Get input values
-        String username = editTextUsername.getText().toString().trim();
-        String password = editTextPassword.getText().toString().trim();
+    private String getUsername() {
+        return editTextUsername.getText().toString().trim();
+    }
 
-        // Validate input
-        if (!validateInput(username, password)) {
-            return;
-        }
-
-        // Show progress bar
-        showProgress(true);
-
-        // Validate credentials against database
-        User user = databaseHelper.validateUser(username, password);
-
-        if (user != null) {
-            // Login successful
-            sessionManager.saveSession(user.getUserId(), user.getUsername());
-            showProgress(false);
-            Toast.makeText(this, "Login successful!", Toast.LENGTH_SHORT).show();
-            navigateToMainActivity();
-        } else {
-            // Login failed
-            showProgress(false);
-            showError("Invalid username or password");
-        }
+    // Trimmed the same way version 2 did when accounts were created,
+    // so existing users can still log in after their passwords are hashed
+    private String getPassword() {
+        return editTextPassword.getText().toString().trim();
     }
 
     /**
-     * Handle register button click
-     * Creates new user account if username doesn't exist
+     * Update the screen whenever the ViewModel's data changes
      */
-    private void handleRegistration() {
-        // Get input values
-        String username = editTextUsername.getText().toString().trim();
-        String password = editTextPassword.getText().toString().trim();
+    private void observeViewModel() {
+        viewModel.isLoading().observe(this, this::showProgress);
 
-        // Validate input
-        if (!validateInput(username, password)) {
-            return;
-        }
+        viewModel.getErrorMessage().observe(this, error -> {
+            if (error != null) {
+                showError(error);
+                viewModel.clearError();
+            }
+        });
 
-        // Show progress bar
-        showProgress(true);
-
-        // Check if username already exists
-        if (databaseHelper.checkUsernameExists(username)) {
-            showProgress(false);
-            showError("Username already exists. Please choose a different username.");
-            return;
-        }
-
-        // Create new user
-        User newUser = new User(username, password);
-        long userId = databaseHelper.addUser(newUser);
-
-        if (userId != AppConstants.NO_ID) {
-            // Registration successful
-            sessionManager.saveSession((int) userId, username);
-            showProgress(false);
-            Toast.makeText(this, "Registration successful!", Toast.LENGTH_SHORT).show();
-            navigateToMainActivity();
-        } else {
-            // Registration failed
-            showProgress(false);
-            showError("Registration failed. Please try again.");
-        }
-    }
-
-    /**
-     * Validate username and password input using the shared Validator rules
-     * @param username Username input
-     * @param password Password input
-     * @return true if input is valid, false otherwise
-     */
-    private boolean validateInput(String username, String password) {
-        String error = Validator.checkLogin(username, password);
-        if (error != null) {
-            showError(error);
-            return false;
-        }
-        return true;
+        viewModel.getLoggedInUser().observe(this, user -> {
+            if (user != null) {
+                sessionManager.saveSession(user.getUserId(), user.getUsername());
+                Toast.makeText(this, registering ? "Registration successful!" : "Login successful!",
+                        Toast.LENGTH_SHORT).show();
+                navigateToMainActivity();
+            }
+        });
     }
 
     /**

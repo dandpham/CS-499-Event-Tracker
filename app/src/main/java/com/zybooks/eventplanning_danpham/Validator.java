@@ -12,6 +12,8 @@ public final class Validator {
 
     public static final int MIN_USERNAME_LENGTH = 3;
     public static final int MIN_PASSWORD_LENGTH = 6;
+    public static final int MAX_REPEAT_DAYS = 3650; // 10 years
+    public static final int MAX_MODEL_LENGTH = 30;
 
     // 2 to 10 letters, numbers, or dashes, such as N12345 or 165432
     private static final String TAIL_NUMBER_PATTERN = "[A-Za-z0-9-]{2,10}";
@@ -79,6 +81,59 @@ public final class Validator {
             return "Date and time can't be in the past";
         }
 
+        return null;
+    }
+
+    /**
+     * Check the optional repeat interval. Blank means the task doesn't repeat.
+     * @return an error message, or null if valid
+     */
+    public static String checkRepeatDays(String repeatDays) {
+        if (repeatDays == null || repeatDays.trim().isEmpty()) {
+            return null;
+        }
+        int days;
+        try {
+            days = Integer.parseInt(repeatDays.trim());
+        } catch (NumberFormatException e) {
+            return "Repeat interval must be a whole number of days";
+        }
+        if (days < 1 || days > MAX_REPEAT_DAYS) {
+            return "Repeat interval must be between 1 and " + MAX_REPEAT_DAYS + " days";
+        }
+        return null;
+    }
+
+    /**
+     * Check the optional aircraft model
+     * @return an error message, or null if valid
+     */
+    public static String checkAircraftModel(String model) {
+        if (model != null && model.trim().length() > MAX_MODEL_LENGTH) {
+            return "Aircraft model must be " + MAX_MODEL_LENGTH + " characters or less";
+        }
+        return null;
+    }
+
+    /**
+     * Check a password change. The current password is checked against
+     * the database later; this only checks the new one.
+     * @return an error message, or null if valid
+     */
+    public static String checkNewPassword(String currentPassword, String newPassword,
+                                          String confirmPassword) {
+        if (currentPassword == null || currentPassword.isEmpty()) {
+            return "Please enter your current password";
+        }
+        if (newPassword == null || newPassword.length() < MIN_PASSWORD_LENGTH) {
+            return "New password must be at least " + MIN_PASSWORD_LENGTH + " characters";
+        }
+        if (!newPassword.equals(confirmPassword)) {
+            return "New passwords don't match";
+        }
+        if (newPassword.equals(currentPassword)) {
+            return "New password must be different from the current one";
+        }
         return null;
     }
 }
